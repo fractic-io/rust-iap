@@ -1,0 +1,7 @@
+[package]
+name = "fractic-iap"
+version = "0.1.0"
+edition = "2021"
+authors = ["Mart van Buren <mart@fractic.io>"]
+
+[dependencies]
