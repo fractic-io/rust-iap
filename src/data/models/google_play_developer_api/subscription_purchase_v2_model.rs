@@ -102,6 +102,7 @@ pub(crate) enum SubscriptionState {
     /// purchase was for an existing subscription, use linkedPurchaseToken to
     /// get the current state of that subscription.
     SubscriptionStatePendingPurchaseCanceled,
+
     #[serde(untagged)]
     Unknown(String),
 }
@@ -181,6 +182,7 @@ pub(crate) enum CancelSurveyReason {
     CancelSurveyReasonFoundBetterApp,
     /// Other reasons.
     CancelSurveyReasonOthers,
+
     #[serde(untagged)]
     Unknown(String),
 }
@@ -215,6 +217,7 @@ pub(crate) enum AcknowledgementState {
     AcknowledgementStatePending,
     /// The subscription is acknowledged.
     AcknowledgementStateAcknowledged,
+
     #[serde(untagged)]
     Unknown(String),
 }
@@ -331,6 +334,7 @@ pub(crate) enum PriceChangeMode {
     PriceIncrease,
     /// If the subscription price is increasing with opt out mode.
     OptOutPriceIncrease,
+
     #[serde(untagged)]
     Unknown(String),
 }
@@ -348,6 +352,7 @@ pub(crate) enum PriceChangeState {
     /// The price change is applied, i.e. the user has started being charged the
     /// new price.
     Applied,
+
     #[serde(untagged)]
     Unknown(String),
 }

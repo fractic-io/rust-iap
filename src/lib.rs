@@ -7,6 +7,8 @@ pub(crate) mod data {
     }
     pub(crate) mod models {
         pub(crate) mod app_store_server_api {
+            pub(crate) mod common;
+            pub(crate) mod jws_renewal_info_decoded_payload_model;
             pub(crate) mod jws_transaction_decoded_payload_model;
             pub(crate) mod transaction_info_response_model;
         }
