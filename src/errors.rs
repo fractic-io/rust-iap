@@ -33,3 +33,6 @@ define_internal_error_type!(
     AppStoreServerNotificationParseError,
     "Error parsing App Store Server notification."
 );
+
+// General.
+define_internal_error_type!(JwsError, "Unable to parse JWS.");

@@ -1,12 +1,14 @@
 use fractic_generic_server_error::{cxt, GenericServerError};
-use jose_jws::Jws;
 use reqwest::header::AUTHORIZATION;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use crate::{
-    data::models::app_store_server_api::{
-        jws_transaction_decoded_payload_model::JWSTransactionDecodedPayloadModel,
-        transaction_info_response_model::TransactionInfoResponseModel,
+    data::{
+        datasources::utils::decode_jws_payload,
+        models::app_store_server_api::{
+            jws_transaction_decoded_payload_model::JWSTransactionDecodedPayloadModel,
+            transaction_info_response_model::TransactionInfoResponseModel,
+        },
     },
     errors::{AppStoreServerApiError, AppStoreServerApiKeyInvalid},
 };
@@ -43,7 +45,7 @@ impl AppStoreServerApiDatasource for AppStoreServerApiDatasourceImpl {
         let response_wrapper: TransactionInfoResponseModel = self
             .callout_with_sandbox_fallback(CXT, &production_url, &sandbox_url, "GetTransactionInfo")
             .await?;
-        Self::decode_jwt_payload(CXT, &response_wrapper.signed_transaction_info)
+        decode_jws_payload(CXT, &response_wrapper.signed_transaction_info)
     }
 }
 
@@ -98,31 +100,6 @@ impl AppStoreServerApiDatasourceImpl {
             AppStoreServerApiKeyInvalid::with_debug(
                 CXT,
                 "Failed to build JWT token.",
-                format!("{:?}", e),
-            )
-        })
-    }
-
-    fn decode_jwt_payload<T: DeserializeOwned>(
-        cxt: &'static str,
-        data: &str,
-    ) -> Result<T, GenericServerError> {
-        let jws = match serde_json::from_str(data) {
-            Ok(Jws::General(jws)) => jws,
-            Err(parsing_error) => {
-                return Err(AppStoreServerApiError::with_debug(
-                    cxt,
-                    "Failed to parse JWS struct.",
-                    format!("{:?}", parsing_error),
-                ))
-            }
-            _ => return Err(AppStoreServerApiError::new(cxt, "Invalid JWS type.")),
-        };
-        let payload = jws.payload.unwrap();
-        serde_json::from_slice(&payload).map_err(|e| {
-            AppStoreServerApiError::with_debug(
-                cxt,
-                "Failed to parse JWS payload.",
                 format!("{:?}", e),
             )
         })
