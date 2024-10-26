@@ -5,6 +5,7 @@ edition = "2021"
 authors = ["Mart van Buren <mart@fractic.io>"]
 
 [dependencies]
+base64 = "0.22.1"
 chrono = "0.4.38"
 fractic-generic-server-error = { git = "https://github.com/fractic-io/rust-generic-server-error.git" }
 jose-jws = "0.1.2"
