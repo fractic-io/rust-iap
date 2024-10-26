@@ -5,6 +5,9 @@ edition = "2021"
 authors = ["Mart van Buren <mart@fractic.io>"]
 
 [dependencies]
+fractic-generic-server-error = { git = "https://github.com/fractic-io/rust-generic-server-error.git" }
+reqwest = { version = "0.12.8", default-features = false, features = ["rustls-tls", "json"] }
 serde = { version = "1.0.213", features = ["derive"] }
 serde_json = "1.0.132"
 serde_repr = "0.1.19"
+yup-oauth2 = "11.0.0"
