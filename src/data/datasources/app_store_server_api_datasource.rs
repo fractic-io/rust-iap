@@ -50,21 +50,21 @@ impl AppStoreServerApiDatasource for AppStoreServerApiDatasourceImpl {
 }
 
 impl AppStoreServerApiDatasourceImpl {
-    pub async fn new(
+    pub(crate) async fn new(
         api_key: &str,
         key_id: &str,
-        key_issuer: &str,
+        issuer_id: &str,
         bundle_id: &str,
     ) -> Result<Self, GenericServerError> {
         Ok(Self {
-            jwt_token: Self::build_jwt_token(api_key, key_id, key_issuer, bundle_id).await?,
+            jwt_token: Self::build_jwt_token(api_key, key_id, issuer_id, bundle_id).await?,
         })
     }
 
     async fn build_jwt_token(
         api_key: &str,
         key_id: &str,
-        key_issuer: &str,
+        issuer_id: &str,
         bundle_id: &str,
     ) -> Result<String, GenericServerError> {
         cxt!("AppStoreServerApiDatasourceImpl::build_jwt_token");
@@ -83,7 +83,7 @@ impl AppStoreServerApiDatasourceImpl {
             bid: String,
         }
         let claims = Claims {
-            iss: key_issuer.to_owned(),
+            iss: issuer_id.to_owned(),
             iat: chrono::Utc::now().timestamp() as usize,
             exp: (chrono::Utc::now() + chrono::Duration::minutes(10)).timestamp() as usize,
             aud: "appstoreconnect-v1".to_owned(),

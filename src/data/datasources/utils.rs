@@ -19,7 +19,9 @@ pub(crate) fn decode_jws_payload<T: DeserializeOwned>(
         }
         _ => return Err(JwsError::new(cxt, "Invalid JWS type.")),
     };
-    let payload = jws.payload.unwrap();
+    let payload = jws
+        .payload
+        .ok_or(JwsError::new(cxt, "JWS payload is missing."))?;
     serde_json::from_slice(&payload)
         .map_err(|e| JwsError::with_debug(cxt, "Failed to parse JWS payload.", format!("{:?}", e)))
 }

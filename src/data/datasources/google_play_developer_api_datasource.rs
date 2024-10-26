@@ -75,7 +75,7 @@ impl GooglePlayDeveloperApiDatasource for GooglePlayDeveloperApiDatasourceImpl {
 }
 
 impl GooglePlayDeveloperApiDatasourceImpl {
-    pub async fn new(api_key: &str) -> Result<Self, GenericServerError> {
+    pub(crate) async fn new(api_key: &str) -> Result<Self, GenericServerError> {
         Ok(Self {
             access_token: Self::build_access_token(api_key).await?,
         })

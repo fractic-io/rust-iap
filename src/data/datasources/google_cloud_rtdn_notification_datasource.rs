@@ -53,7 +53,7 @@ impl GoogleCloudRtdnNotificationDatasource for GoogleCloudRtdnNotificationDataso
 }
 
 impl GoogleCloudRtdnNotificationDatasourceImpl {
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self
     }
 }
