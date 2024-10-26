@@ -1,8 +1,8 @@
 pub(crate) mod data {
     pub(crate) mod datasources {
         pub(crate) mod app_store_server_api_datasource;
-        pub(crate) mod app_store_server_notifications_datasource;
-        pub(crate) mod google_cloud_rtdn_notifications_datasource;
+        pub(crate) mod app_store_server_notification_datasource;
+        pub(crate) mod google_cloud_rtdn_notification_datasource;
         pub(crate) mod google_play_developer_api_datasource;
     }
     pub(crate) mod models {

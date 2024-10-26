@@ -1,6 +1,6 @@
 use fractic_generic_server_error::{cxt, GenericServerError};
 use reqwest::header::AUTHORIZATION;
-use serde::{de::DeserializeOwned, Deserialize};
+use serde::de::DeserializeOwned;
 use yup_oauth2::{parse_service_account_key, ServiceAccountAuthenticator};
 
 use crate::{
@@ -8,7 +8,7 @@ use crate::{
         product_purchase_model::ProductPurchaseModel,
         subscription_purchase_v2_model::SubscriptionPurchaseV2Model,
     },
-    errors::{ApiKeyInvalid, GooglePlayDeveloperApiError},
+    errors::{GooglePlayDeveloperApiError, GooglePlayDeveloperApiKeyInvalid},
 };
 
 pub(crate) trait GooglePlayDeveloperApiDatasource {
@@ -75,16 +75,16 @@ impl GooglePlayDeveloperApiDatasource for GooglePlayDeveloperApiDatasourceImpl {
 }
 
 impl GooglePlayDeveloperApiDatasourceImpl {
-    pub async fn new(api_key: String) -> Result<Self, GenericServerError> {
+    pub async fn new(api_key: &str) -> Result<Self, GenericServerError> {
         Ok(Self {
             access_token: Self::build_access_token(api_key).await?,
         })
     }
 
-    async fn build_access_token(api_key: String) -> Result<String, GenericServerError> {
+    async fn build_access_token(api_key: &str) -> Result<String, GenericServerError> {
         cxt!("GooglePlayDeveloperApiDatasourceImpl::build_access_token");
         let key = parse_service_account_key(api_key).map_err(|e| {
-            ApiKeyInvalid::with_debug(
+            GooglePlayDeveloperApiKeyInvalid::with_debug(
                 CXT,
                 "Google Play API key could not be parsed.",
                 format!("{:?}", e),
@@ -94,7 +94,7 @@ impl GooglePlayDeveloperApiDatasourceImpl {
             .build()
             .await
             .map_err(|e| {
-                ApiKeyInvalid::with_debug(
+                GooglePlayDeveloperApiKeyInvalid::with_debug(
                     CXT,
                     "Google Play API service account authenticator could not be built.",
                     format!("{:?}", e),
@@ -106,14 +106,14 @@ impl GooglePlayDeveloperApiDatasourceImpl {
             .token(scopes)
             .await
             .map_err(|e| {
-                ApiKeyInvalid::with_debug(
+                GooglePlayDeveloperApiKeyInvalid::with_debug(
                     CXT,
                     "Google Play API service account token could not be built.",
                     format!("{:?}", e),
                 )
             })?
             .token()
-            .ok_or(ApiKeyInvalid::new(
+            .ok_or(GooglePlayDeveloperApiKeyInvalid::new(
                 CXT,
                 "Google Play API service account token is empty.",
             ))?
