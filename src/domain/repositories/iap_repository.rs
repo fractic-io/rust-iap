@@ -22,13 +22,15 @@ pub trait TypedProductId: IapProductId {
 
     fn extract_details_from_apple_transaction(
         m: &JwsTransactionDecodedPayloadModel,
-    ) -> Self::DetailsType;
+    ) -> Result<Self::DetailsType, GenericServerError>;
 
-    fn extract_details_from_google_product_purchase(m: &ProductPurchaseModel) -> Self::DetailsType;
+    fn extract_details_from_google_product_purchase(
+        m: &ProductPurchaseModel,
+    ) -> Result<Self::DetailsType, GenericServerError>;
 
     fn extract_details_from_google_subscription_purchase(
         m: &SubscriptionPurchaseV2Model,
-    ) -> Self::DetailsType;
+    ) -> Result<Self::DetailsType, GenericServerError>;
 }
 
 #[async_trait]
@@ -37,6 +39,7 @@ pub trait IapRepository: Send + Sync {
         &self,
         product_id: T,
         purchase_id: IapPurchaseId,
+        include_price_info: bool,
     ) -> Result<IapDetails<T::DetailsType>, GenericServerError>;
 
     async fn parse_apple_notification(

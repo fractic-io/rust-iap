@@ -30,9 +30,10 @@ impl<R: IapRepository> IapUtil<R> {
         &self,
         product_id: T,
         purchase_id: IapPurchaseId,
+        include_price_info: bool,
     ) -> Result<IapDetails<T::DetailsType>, GenericServerError> {
         self.iap_repository
-            .verify_and_get_details(product_id, purchase_id)
+            .verify_and_get_details(product_id, purchase_id, include_price_info)
             .await
     }
 

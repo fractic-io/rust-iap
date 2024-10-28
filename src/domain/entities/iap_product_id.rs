@@ -1,5 +1,5 @@
 #[derive(Debug)]
-pub struct IapSubscriptionId {
+pub struct IapNonConsumableId {
     pub sku: String,
 }
 
@@ -9,7 +9,7 @@ pub struct IapConsumableId {
 }
 
 #[derive(Debug)]
-pub struct IapNonConsumableId {
+pub struct IapSubscriptionId {
     pub sku: String,
 }
 

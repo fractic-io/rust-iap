@@ -18,7 +18,7 @@ pub struct SubscriptionPurchaseV2Model {
     pub(crate) kind: Option<String>,
     /// ISO 3166-1 alpha-2 billing country/region code of the user at the time
     /// the subscription was granted.
-    pub(crate) region_code: Option<String>,
+    pub(crate) region_code: String,
     /// Item-level info for a subscription purchase. The items in the same
     /// purchase should be either all with AutoRenewingPlan or all with
     /// PrepaidPlan.
@@ -69,7 +69,7 @@ pub struct SubscriptionPurchaseV2Model {
 /// The potential states a subscription can be in, for example whether it is
 /// active or canceled. The items within a subscription purchase can either be
 /// all auto renewing plans or prepaid plans.
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, PartialEq)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub(crate) enum SubscriptionState {
     /// Unspecified subscription state.

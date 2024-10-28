@@ -69,7 +69,7 @@ pub struct JwsTransactionDecodedPayloadModel {
     #[serde(with = "ts_milliseconds")]
     pub(crate) purchase_date: DateTime<Utc>,
     /// The number of consumable products the customer purchased.
-    pub(crate) quantity: i32,
+    pub(crate) quantity: Option<i32>,
     /// The UNIX time, in milliseconds, that the App Store refunded the
     /// transaction or revoked it from Family Sharing.
     #[serde(with = "ts_milliseconds_option")]
@@ -83,7 +83,7 @@ pub struct JwsTransactionDecodedPayloadModel {
     pub(crate) signed_date: DateTime<Utc>,
     /// The three-letter code that represents the country or region associated
     /// with the App Store storefront for the purchase.
-    pub(crate) storefront: Option<String>,
+    pub(crate) storefront: String,
     /// An Apple-defined value that uniquely identifies the App Store storefront
     /// associated with the purchase.
     pub(crate) storefront_id: Option<String>,

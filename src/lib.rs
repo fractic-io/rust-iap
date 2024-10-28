@@ -22,6 +22,7 @@ pub(crate) mod data {
             pub(crate) mod pub_sub_model;
         }
         pub(crate) mod google_play_developer_api {
+            pub(crate) mod in_app_product_model;
             pub(crate) mod product_purchase_model;
             pub(crate) mod subscription_purchase_v2_model;
         }

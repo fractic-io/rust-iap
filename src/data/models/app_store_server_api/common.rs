@@ -3,7 +3,7 @@
 use serde::Deserialize;
 use serde_repr::Deserialize_repr;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, PartialEq)]
 pub(crate) enum Environment {
     /// Indicates that the data applies to testing in the sandbox environment.
     Sandbox,

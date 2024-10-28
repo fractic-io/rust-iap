@@ -56,7 +56,7 @@ pub struct ProductPurchaseModel {
     pub(crate) obfuscated_external_profile_id: Option<String>,
     /// ISO 3166-1 alpha-2 billing region code of the user at the time the
     /// product was granted.
-    pub(crate) region_code: Option<String>,
+    pub(crate) region_code: String,
     /// The quantity eligible for refund, i.e. quantity that hasn't been
     /// refunded. The value reflects quantity-based partial refunds and full
     /// refunds.
