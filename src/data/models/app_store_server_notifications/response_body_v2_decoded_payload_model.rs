@@ -1,11 +1,12 @@
 #![allow(dead_code)]
 
+use chrono::serde::ts_milliseconds;
+use chrono::{DateTime, Utc};
 use serde::Deserialize;
 use serde_repr::Deserialize_repr;
 
 use crate::data::models::app_store_server_api::common::Environment;
 
-type TimestampType = i64;
 type AppleIdType = u64;
 type JWSTransaction = String;
 type JWSRenewalInfo = String;
@@ -42,7 +43,8 @@ pub(crate) struct ResponseBodyV2DecodedPayloadModel {
     pub(crate) version: String,
     /// The UNIX time, in milliseconds, that the App Store signed the JSON Web
     /// Signature data.
-    pub(crate) signed_date: TimestampType,
+    #[serde(with = "ts_milliseconds")]
+    pub(crate) signed_date: DateTime<Utc>,
     /// A unique identifier for the notification. Use this value to identify a
     /// duplicate notification.
     pub(crate) notification_uuid: String,
@@ -410,7 +412,8 @@ pub(crate) struct ExternalPurchaseToken {
     /// endpoint.
     pub(crate) external_purchase_id: String,
     /// The UNIX time, in milliseconds, when the system created the token.
-    pub(crate) token_creation_date: TimestampType,
+    #[serde(with = "ts_milliseconds")]
+    pub(crate) token_creation_date: DateTime<Utc>,
     /// The app Apple ID for which the system generated the token.
     pub(crate) app_apple_id: Option<AppleIdType>,
     /// The bundle ID of the app for which the system generated the token.

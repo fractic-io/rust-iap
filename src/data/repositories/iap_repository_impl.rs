@@ -1,5 +1,4 @@
 use async_trait::async_trait;
-use chrono::DateTime;
 use fractic_generic_server_error::{cxt, GenericServerError};
 
 use crate::{
@@ -24,10 +23,7 @@ use crate::{
         },
         repositories::iap_repository::{IapRepository, TypedProductId},
     },
-    errors::{
-        AppStoreServerApiInvalidResponse, GoogleCloudRtdnNotificationParseError,
-        GooglePlayDeveloperApiInvalidResponse,
-    },
+    errors::{GoogleCloudRtdnNotificationParseError, GooglePlayDeveloperApiInvalidResponse},
 };
 
 pub(crate) struct IapRepositoryImpl<
@@ -65,16 +61,7 @@ impl<
                     .await?;
                 IapDetails {
                     is_active: true,
-                    purchase_time: DateTime::from_timestamp_millis(
-                        apple_transaction_info.purchase_date,
-                    )
-                    .ok_or_else(|| {
-                        AppStoreServerApiInvalidResponse::with_debug(
-                            CXT,
-                            "Invalid purchase date.",
-                            apple_transaction_info.purchase_date.to_string(),
-                        )
-                    })?,
+                    purchase_time: apple_transaction_info.purchase_date,
                     type_specific_details: T::extract_details_from_apple_transaction(
                         &apple_transaction_info,
                     ),
@@ -88,19 +75,7 @@ impl<
                         .await?;
                     IapDetails {
                         is_active: true,
-                        purchase_time: google_product_purchase
-                            .purchase_time_millis
-                            .parse()
-                            .ok()
-                            .map(|t| DateTime::from_timestamp_millis(t))
-                            .flatten()
-                            .ok_or_else(|| {
-                                GooglePlayDeveloperApiInvalidResponse::with_debug(
-                                    CXT,
-                                    "Invalid purchase date.",
-                                    google_product_purchase.purchase_time_millis.to_string(),
-                                )
-                            })?,
+                        purchase_time: google_product_purchase.purchase_time_millis,
                         type_specific_details: T::extract_details_from_google_product_purchase(
                             &google_product_purchase,
                         ),
@@ -113,26 +88,14 @@ impl<
                         .await?;
                     IapDetails {
                         is_active: true,
-                        purchase_time: google_subscription_purchase
-                            .start_time
-                            .clone()
-                            .ok_or_else(|| {
+                        purchase_time: google_subscription_purchase.start_time.ok_or_else(
+                            || {
                                 GooglePlayDeveloperApiInvalidResponse::new(
                                     CXT,
                                     "Subscription did not have a start time.",
                                 )
-                            })?
-                            .parse()
-                            .ok()
-                            .map(|t| DateTime::from_timestamp_millis(t))
-                            .flatten()
-                            .ok_or_else(|| {
-                                GooglePlayDeveloperApiInvalidResponse::with_debug(
-                                    CXT,
-                                    "Invalid purchase date.",
-                                    format!("{:?}", google_subscription_purchase.start_time),
-                                )
-                            })?,
+                            },
+                        )?,
                         type_specific_details: T::extract_details_from_google_subscription_purchase(
                             &google_subscription_purchase,
                         ),

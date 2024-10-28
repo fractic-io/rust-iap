@@ -1,5 +1,6 @@
 #![allow(dead_code)]
 
+use chrono::{serde::ts_milliseconds, DateTime, Utc};
 use serde::Deserialize;
 use serde_repr::Deserialize_repr;
 
@@ -19,7 +20,8 @@ pub(crate) struct DeveloperNotificationModel {
     /// (for example, `com.some.thing`).
     pub(crate) package_name: String,
     /// The timestamp when the event occurred, in milliseconds since the Epoch.
-    pub(crate) event_time_millis: i64,
+    #[serde(with = "ts_milliseconds")]
+    pub(crate) event_time_millis: DateTime<Utc>,
     /// If this field is present, then this notification is related to a
     /// subscription, and this field contains additional information related to
     /// the subscription. Note that this field is mutually exclusive with

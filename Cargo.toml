@@ -7,7 +7,7 @@ authors = ["Mart van Buren <mart@fractic.io>"]
 [dependencies]
 async-trait = "0.1.83"
 base64 = "0.22.1"
-chrono = "0.4.38"
+chrono = { version = "0.4.38", features = ["serde"] }
 fractic-aws-secrets = { git = "https://github.com/fractic-io/rust-aws-secrets.git" }
 fractic-generic-server-error = { git = "https://github.com/fractic-io/rust-generic-server-error.git" }
 jose-jws = "0.1.2"

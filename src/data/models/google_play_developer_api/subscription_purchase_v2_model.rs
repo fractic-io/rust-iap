@@ -1,5 +1,6 @@
 #![allow(dead_code)]
 
+use chrono::{DateTime, Utc};
 use serde::Deserialize;
 
 /// Data structure returned by the Google Play Developer API when querying for a
@@ -30,7 +31,7 @@ pub struct SubscriptionPurchaseV2Model {
     /// A timestamp in RFC3339 UTC "Zulu" format, with nanosecond resolution and
     /// up to nine fractional digits. Examples: "2014-10-02T15:01:23Z" and
     /// "2014-10-02T15:01:23.045123456Z".
-    pub(crate) start_time: Option<String>,
+    pub(crate) start_time: Option<DateTime<Utc>>,
     /// The current state of the subscription.
     pub(crate) subscription_state: SubscriptionState,
     /// The order id of the latest order associated with the purchase of the
@@ -116,7 +117,7 @@ pub(crate) struct PausedStateContext {
     /// A timestamp in RFC3339 UTC "Zulu" format, with nanosecond resolution and
     /// up to nine fractional digits. Examples: "2014-10-02T15:01:23Z" and
     /// "2014-10-02T15:01:23.045123456Z".
-    pub(crate) auto_resume_time: String,
+    pub(crate) auto_resume_time: DateTime<Utc>,
 }
 
 /// Information specific to a subscription in the SUBSCRIPTION_STATE_CANCELED or
@@ -152,7 +153,7 @@ pub(crate) struct UserInitiatedCancellation {
     /// A timestamp in RFC3339 UTC "Zulu" format, with nanosecond resolution and
     /// up to nine fractional digits. Examples: "2014-10-02T15:01:23Z" and
     /// "2014-10-02T15:01:23.045123456Z".
-    pub(crate) cancel_time: Option<String>,
+    pub(crate) cancel_time: Option<DateTime<Utc>>,
 }
 
 /// Result of the cancel survey when the subscription was canceled by the user.
@@ -271,7 +272,7 @@ pub(crate) struct SubscriptionPurchaseLineItem {
     /// A timestamp in RFC3339 UTC "Zulu" format, with nanosecond resolution and
     /// up to nine fractional digits. Examples: "2014-10-02T15:01:23Z" and
     /// "2014-10-02T15:01:23.045123456Z".
-    pub(crate) expiry_time: String,
+    pub(crate) expiry_time: DateTime<Utc>,
     /// The offer details for this item.
     pub(crate) offer_details: Option<OfferDetails>,
     /// Information for deferred item replacement.
@@ -319,7 +320,7 @@ pub(crate) struct SubscriptionItemPriceChangeDetails {
     /// A timestamp in RFC3339 UTC "Zulu" format, with nanosecond resolution and
     /// up to nine fractional digits. Examples: "2014-10-02T15:01:23Z" and
     /// "2014-10-02T15:01:23.045123456Z".
-    pub(crate) expected_new_price_charge_time: Option<String>,
+    pub(crate) expected_new_price_charge_time: Option<DateTime<Utc>>,
 }
 
 /// The mode of the price change.
@@ -393,7 +394,7 @@ pub(crate) struct PrepaidPlan {
     /// A timestamp in RFC3339 UTC "Zulu" format, with nanosecond resolution and
     /// up to nine fractional digits. Examples: "2014-10-02T15:01:23Z" and
     /// "2014-10-02T15:01:23.045123456Z".
-    pub(crate) allow_extend_after_time: Option<String>,
+    pub(crate) allow_extend_after_time: Option<DateTime<Utc>>,
 }
 
 /// Offer details information related to a purchase line item.

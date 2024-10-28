@@ -1,11 +1,13 @@
 #![allow(dead_code)]
 
+use chrono::{
+    serde::{ts_milliseconds, ts_milliseconds_option},
+    DateTime, Utc,
+};
 use serde::Deserialize;
 use serde_repr::Deserialize_repr;
 
 use super::common::{Environment, OfferDiscountType, OfferType};
-
-type TimestampType = i64;
 
 /// Data structure for the decoded payload of a JWSTransaction, returned by the
 /// App Store Server API.
@@ -30,7 +32,8 @@ pub struct JwsTransactionDecodedPayloadModel {
     /// The server environment, either sandbox or production.
     pub(crate) environment: Environment,
     /// The UNIX time, in milliseconds, that the subscription expires or renews.
-    pub(crate) expires_date: Option<TimestampType>,
+    #[serde(with = "ts_milliseconds_option")]
+    pub(crate) expires_date: Option<DateTime<Utc>>,
     /// A string that describes whether the transaction was purchased by the
     /// customer, or is available to them through Family Sharing.
     pub(crate) in_app_ownership_type: Option<InAppOwnershipType>,
@@ -48,7 +51,8 @@ pub struct JwsTransactionDecodedPayloadModel {
     pub(crate) offer_type: Option<OfferType>,
     /// The UNIX time, in milliseconds, that represents the purchase date of the
     /// original transaction identifier.
-    pub(crate) original_purchase_date: Option<TimestampType>,
+    #[serde(with = "ts_milliseconds_option")]
+    pub(crate) original_purchase_date: Option<DateTime<Utc>>,
     /// The transaction identifier of the original purchase.
     pub(crate) original_transaction_id: String,
     /// An integer value that represents the price multiplied by 1000 of the
@@ -62,18 +66,21 @@ pub struct JwsTransactionDecodedPayloadModel {
     /// The UNIX time, in milliseconds, that the App Store charged the
     /// customer’s account for a purchase, restored product, subscription, or
     /// subscription renewal after a lapse.
-    pub(crate) purchase_date: TimestampType,
+    #[serde(with = "ts_milliseconds")]
+    pub(crate) purchase_date: DateTime<Utc>,
     /// The number of consumable products the customer purchased.
     pub(crate) quantity: i32,
     /// The UNIX time, in milliseconds, that the App Store refunded the
     /// transaction or revoked it from Family Sharing.
-    pub(crate) revocation_date: Option<TimestampType>,
+    #[serde(with = "ts_milliseconds_option")]
+    pub(crate) revocation_date: Option<DateTime<Utc>>,
     /// The reason that the App Store refunded the transaction or revoked it
     /// from Family Sharing.
     pub(crate) revocation_reason: Option<RevocationReason>,
     /// The UNIX time, in milliseconds, that the App Store signed the JSON Web
     /// Signature (JWS) data.
-    pub(crate) signed_date: TimestampType,
+    #[serde(with = "ts_milliseconds")]
+    pub(crate) signed_date: DateTime<Utc>,
     /// The three-letter code that represents the country or region associated
     /// with the App Store storefront for the purchase.
     pub(crate) storefront: Option<String>,

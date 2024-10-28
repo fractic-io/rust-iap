@@ -1,11 +1,13 @@
 #![allow(dead_code)]
 
+use chrono::{
+    serde::{ts_milliseconds, ts_milliseconds_option},
+    DateTime, Utc,
+};
 use serde::Deserialize;
 use serde_repr::Deserialize_repr;
 
 use super::common::{Environment, OfferDiscountType, OfferType};
-
-type TimestampType = i64;
 
 /// Data structure for the decoded payload of a JWSRenewalInfo, returned by the
 /// App Store Server API.
@@ -32,7 +34,8 @@ pub(crate) struct JwsRenewalInfoDecodedPayloadModel {
     pub(crate) expiration_intent: Option<ExpirationIntent>,
     /// The time when the Billing Grace Period for subscription renewals
     /// expires.
-    pub(crate) grace_period_expires_date: Option<TimestampType>,
+    #[serde(with = "ts_milliseconds_option")]
+    pub(crate) grace_period_expires_date: Option<DateTime<Utc>>,
     /// A Boolean value that indicates whether the App Store is attempting to
     /// automatically renew the expired subscription.
     #[serde(default)]
@@ -54,16 +57,19 @@ pub(crate) struct JwsRenewalInfoDecodedPayloadModel {
     /// The earliest start date of the auto-renewable subscription in a series
     /// of subscription purchases that ignores all lapses of paid service that
     /// are 60 days or fewer.
-    pub(crate) recent_subscription_start_date: Option<TimestampType>,
+    #[serde(with = "ts_milliseconds_option")]
+    pub(crate) recent_subscription_start_date: Option<DateTime<Utc>>,
     /// The UNIX time, in milliseconds, when the most recent auto-renewable
     /// subscription purchase expires.
-    pub(crate) renewal_date: Option<TimestampType>,
+    #[serde(with = "ts_milliseconds_option")]
+    pub(crate) renewal_date: Option<DateTime<Utc>>,
     /// The renewal price, in milliunits, of the auto-renewable subscription
     /// that renews at the next billing period.
     pub(crate) renewal_price: Option<i64>,
     /// The UNIX time, in milliseconds, that the App Store signed the JSON Web
     /// Signature (JWS) data.
-    pub(crate) signed_date: TimestampType,
+    #[serde(with = "ts_milliseconds")]
+    pub(crate) signed_date: DateTime<Utc>,
 }
 
 #[derive(Debug, Deserialize_repr)]
