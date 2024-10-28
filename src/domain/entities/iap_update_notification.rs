@@ -65,7 +65,7 @@ pub enum NotificationDetails {
 #[derive(Debug, Clone)]
 pub enum SubscriptionEndReason {
     Paused,
-    Cancelled { reason: Option<String> },
+    Cancelled { details: Option<String> },
     FailedToRenew,
     Voided { is_refunded: bool },
     DeclinedPriceIncrease,
