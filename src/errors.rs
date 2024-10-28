@@ -11,6 +11,10 @@ define_internal_error_type!(
     GooglePlayDeveloperApiError,
     "Error calling out to Google Play Developer API."
 );
+define_internal_error_type!(
+    GooglePlayDeveloperApiInvalidResponse,
+    "Invalid response from Google Play Developer API."
+);
 
 // Google Cloud RTDN Notifications.
 define_internal_error_type!(
@@ -26,6 +30,10 @@ define_internal_error_type!(
 define_internal_error_type!(
     AppStoreServerApiError,
     "Error calling out to App Store Server API."
+);
+define_internal_error_type!(
+    AppStoreServerApiInvalidResponse,
+    "Invalid response from App Store Server API."
 );
 
 // App Store Server Notifications.

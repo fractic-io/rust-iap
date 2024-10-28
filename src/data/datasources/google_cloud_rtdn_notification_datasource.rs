@@ -1,3 +1,4 @@
+use async_trait::async_trait;
 use base64::{prelude::BASE64_STANDARD, Engine as _};
 use fractic_generic_server_error::{cxt, GenericServerError};
 
@@ -8,7 +9,8 @@ use crate::{
     errors::GoogleCloudRtdnNotificationParseError,
 };
 
-pub(crate) trait GoogleCloudRtdnNotificationDatasource {
+#[async_trait]
+pub(crate) trait GoogleCloudRtdnNotificationDatasource: Send + Sync {
     /// Parse Google Cloud RTDN Notification:
     /// https://developer.android.com/google/play/billing/rtdn-reference
     ///
@@ -22,6 +24,7 @@ pub(crate) trait GoogleCloudRtdnNotificationDatasource {
 
 pub(crate) struct GoogleCloudRtdnNotificationDatasourceImpl;
 
+#[async_trait]
 impl GoogleCloudRtdnNotificationDatasource for GoogleCloudRtdnNotificationDatasourceImpl {
     async fn parse_notification(
         &self,

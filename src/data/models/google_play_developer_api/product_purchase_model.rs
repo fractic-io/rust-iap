@@ -12,7 +12,7 @@ use serde_repr::Deserialize_repr;
 /// reference, so reasonable assumptions are made.
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct ProductPurchaseModel {
+pub struct ProductPurchaseModel {
     /// This kind represents an inappPurchase object in the androidpublisher
     /// service.
     pub(crate) kind: Option<String>,

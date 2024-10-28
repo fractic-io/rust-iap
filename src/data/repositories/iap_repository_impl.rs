@@ -1,4 +1,6 @@
-use fractic_generic_server_error::GenericServerError;
+use async_trait::async_trait;
+use chrono::DateTime;
+use fractic_generic_server_error::{cxt, GenericServerError};
 
 use crate::{
     data::datasources::{
@@ -17,10 +19,14 @@ use crate::{
     },
     domain::{
         entities::{
-            iap_details::IapDetails, iap_id::IapId, iap_type::IapType,
-            iap_update_notification::IapUpdateNotification,
+            iap_details::IapDetails, iap_product_id::private::_ProductIdType,
+            iap_purchase_id::IapPurchaseId, iap_update_notification::IapUpdateNotification,
         },
-        repositories::iap_repository::IapRepository,
+        repositories::iap_repository::{IapRepository, TypedProductId},
+    },
+    errors::{
+        AppStoreServerApiInvalidResponse, GoogleCloudRtdnNotificationParseError,
+        GooglePlayDeveloperApiInvalidResponse,
     },
 };
 
@@ -34,8 +40,10 @@ pub(crate) struct IapRepositoryImpl<
     app_store_server_notification_datasource: B,
     google_play_developer_api_datasource: C,
     google_cloud_rtdn_notification_datasource: D,
+    application_id: String,
 }
 
+#[async_trait]
 impl<
         A: AppStoreServerApiDatasource,
         B: AppStoreServerNotificationDatasource,
@@ -43,26 +51,143 @@ impl<
         D: GoogleCloudRtdnNotificationDatasource,
     > IapRepository for IapRepositoryImpl<A, B, C, D>
 {
-    fn verify_and_get_details(
+    async fn verify_and_get_details<T: TypedProductId>(
         &self,
-        id: IapId,
-        product_type: IapType,
-    ) -> Result<IapDetails, GenericServerError> {
-        todo!()
+        product_id: T,
+        purchase_id: IapPurchaseId,
+    ) -> Result<IapDetails<T::DetailsType>, GenericServerError> {
+        cxt!("IapRepositoryImpl::verify_and_get_details");
+        Ok(match purchase_id {
+            IapPurchaseId::AppStoreTransactionId(transaction_id) => {
+                let apple_transaction_info = self
+                    .app_store_server_api_datasource
+                    .get_transaction_info(&transaction_id)
+                    .await?;
+                IapDetails {
+                    is_active: true,
+                    purchase_time: DateTime::from_timestamp_millis(
+                        apple_transaction_info.purchase_date,
+                    )
+                    .ok_or_else(|| {
+                        AppStoreServerApiInvalidResponse::with_debug(
+                            CXT,
+                            "Invalid purchase date.",
+                            apple_transaction_info.purchase_date.to_string(),
+                        )
+                    })?,
+                    type_specific_details: T::extract_details_from_apple_transaction(
+                        &apple_transaction_info,
+                    ),
+                }
+            }
+            IapPurchaseId::GooglePlayPurchaseToken(token) => match T::product_type() {
+                _ProductIdType::Consumable | _ProductIdType::NonConsumable => {
+                    let google_product_purchase = self
+                        .google_play_developer_api_datasource
+                        .get_product_purchase(&self.application_id, product_id.sku(), &token)
+                        .await?;
+                    IapDetails {
+                        is_active: true,
+                        purchase_time: google_product_purchase
+                            .purchase_time_millis
+                            .parse()
+                            .ok()
+                            .map(|t| DateTime::from_timestamp_millis(t))
+                            .flatten()
+                            .ok_or_else(|| {
+                                GooglePlayDeveloperApiInvalidResponse::with_debug(
+                                    CXT,
+                                    "Invalid purchase date.",
+                                    google_product_purchase.purchase_time_millis.to_string(),
+                                )
+                            })?,
+                        type_specific_details: T::extract_details_from_google_product_purchase(
+                            &google_product_purchase,
+                        ),
+                    }
+                }
+                _ProductIdType::Subscription => {
+                    let google_subscription_purchase = self
+                        .google_play_developer_api_datasource
+                        .get_subscription_purchase_v2(&self.application_id, &token)
+                        .await?;
+                    IapDetails {
+                        is_active: true,
+                        purchase_time: google_subscription_purchase
+                            .start_time
+                            .clone()
+                            .ok_or_else(|| {
+                                GooglePlayDeveloperApiInvalidResponse::new(
+                                    CXT,
+                                    "Subscription did not have a start time.",
+                                )
+                            })?
+                            .parse()
+                            .ok()
+                            .map(|t| DateTime::from_timestamp_millis(t))
+                            .flatten()
+                            .ok_or_else(|| {
+                                GooglePlayDeveloperApiInvalidResponse::with_debug(
+                                    CXT,
+                                    "Invalid purchase date.",
+                                    format!("{:?}", google_subscription_purchase.start_time),
+                                )
+                            })?,
+                        type_specific_details: T::extract_details_from_google_subscription_purchase(
+                            &google_subscription_purchase,
+                        ),
+                    }
+                }
+            },
+        })
     }
 
-    fn parse_apple_notification(
+    async fn parse_apple_notification(
         &self,
         body: &str,
     ) -> Result<IapUpdateNotification, GenericServerError> {
-        todo!()
+        let (_notification, transaction_info, _subscription_renewal_info) = self
+            .app_store_server_notification_datasource
+            .parse_notification(body)
+            .await?;
+        Ok(IapUpdateNotification::TestConsumable {
+            purchase_id: transaction_info
+                .map(|t| IapPurchaseId::AppStoreTransactionId(t.transaction_id)),
+            details: None,
+        })
     }
 
-    fn parse_google_notification(
+    async fn parse_google_notification(
         &self,
         body: &str,
     ) -> Result<IapUpdateNotification, GenericServerError> {
-        todo!()
+        cxt!("IapRepositoryImpl::parse_google_notification");
+        let notification = self
+            .google_cloud_rtdn_notification_datasource
+            .parse_notification(body)
+            .await?;
+        if let Some(n) = notification.subscription_notification {
+            Ok(IapUpdateNotification::TestConsumable {
+                purchase_id: Some(IapPurchaseId::GooglePlayPurchaseToken(n.purchase_token)),
+                details: None,
+            })
+        } else if let Some(n) = notification.one_time_product_notification {
+            Ok(IapUpdateNotification::TestConsumable {
+                purchase_id: Some(IapPurchaseId::GooglePlayPurchaseToken(n.purchase_token)),
+                details: None,
+            })
+        } else if let Some(n) = notification.voided_purchase_notification {
+            Ok(IapUpdateNotification::TestConsumable {
+                purchase_id: Some(IapPurchaseId::GooglePlayPurchaseToken(n.purchase_token)),
+                details: None,
+            })
+        } else {
+            Err(GoogleCloudRtdnNotificationParseError::new(
+                CXT,
+                "Notification did not have one of the recognized types (subscription, one-time purchase, voided purchase, or test).",
+            )
+            .into())
+        }
     }
 }
 
@@ -75,10 +200,10 @@ impl
     >
 {
     pub(crate) async fn new(
+        application_id: String,
         apple_api_key: &str,
         apple_key_id: &str,
         apple_issuer_id: &str,
-        apple_bundle_id: &str,
         google_play_api_key: &str,
     ) -> Result<Self, GenericServerError> {
         Ok(Self {
@@ -86,7 +211,7 @@ impl
                 apple_api_key,
                 apple_key_id,
                 apple_issuer_id,
-                apple_bundle_id,
+                &application_id,
             )
             .await?,
             app_store_server_notification_datasource: AppStoreServerNotificationDatasourceImpl::new(
@@ -97,6 +222,7 @@ impl
             .await?,
             google_cloud_rtdn_notification_datasource:
                 GoogleCloudRtdnNotificationDatasourceImpl::new(),
+            application_id,
         })
     }
 }

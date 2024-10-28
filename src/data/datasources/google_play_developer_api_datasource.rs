@@ -1,3 +1,4 @@
+use async_trait::async_trait;
 use fractic_generic_server_error::{cxt, GenericServerError};
 use reqwest::header::AUTHORIZATION;
 use serde::de::DeserializeOwned;
@@ -11,7 +12,8 @@ use crate::{
     errors::{GooglePlayDeveloperApiError, GooglePlayDeveloperApiKeyInvalid},
 };
 
-pub(crate) trait GooglePlayDeveloperApiDatasource {
+#[async_trait]
+pub(crate) trait GooglePlayDeveloperApiDatasource: Send + Sync {
     /// purchases.products.get:
     /// https://developers.google.com/android-publisher/api-ref/rest/v3/purchases.products/get
     ///
@@ -50,6 +52,7 @@ pub(crate) struct GooglePlayDeveloperApiDatasourceImpl {
     access_token: String,
 }
 
+#[async_trait]
 impl GooglePlayDeveloperApiDatasource for GooglePlayDeveloperApiDatasourceImpl {
     async fn get_product_purchase(
         &self,

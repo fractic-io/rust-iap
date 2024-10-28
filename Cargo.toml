@@ -5,6 +5,7 @@ edition = "2021"
 authors = ["Mart van Buren <mart@fractic.io>"]
 
 [dependencies]
+async-trait = "0.1.83"
 base64 = "0.22.1"
 chrono = "0.4.38"
 fractic-aws-secrets = { git = "https://github.com/fractic-io/rust-aws-secrets.git" }

@@ -1,3 +1,4 @@
+use async_trait::async_trait;
 use fractic_generic_server_error::{cxt, GenericServerError};
 use reqwest::header::AUTHORIZATION;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
@@ -6,14 +7,15 @@ use crate::{
     data::{
         datasources::utils::decode_jws_payload,
         models::app_store_server_api::{
-            jws_transaction_decoded_payload_model::JWSTransactionDecodedPayloadModel,
+            jws_transaction_decoded_payload_model::JwsTransactionDecodedPayloadModel,
             transaction_info_response_model::TransactionInfoResponseModel,
         },
     },
     errors::{AppStoreServerApiError, AppStoreServerApiKeyInvalid},
 };
 
-pub(crate) trait AppStoreServerApiDatasource {
+#[async_trait]
+pub(crate) trait AppStoreServerApiDatasource: Send + Sync {
     /// Get Transaction Info:
     /// https://developer.apple.com/documentation/appstoreserverapi/get_transaction_info
     ///
@@ -23,18 +25,19 @@ pub(crate) trait AppStoreServerApiDatasource {
     async fn get_transaction_info(
         &self,
         transaction_id: &str,
-    ) -> Result<JWSTransactionDecodedPayloadModel, GenericServerError>;
+    ) -> Result<JwsTransactionDecodedPayloadModel, GenericServerError>;
 }
 
 pub(crate) struct AppStoreServerApiDatasourceImpl {
     jwt_token: String,
 }
 
+#[async_trait]
 impl AppStoreServerApiDatasource for AppStoreServerApiDatasourceImpl {
     async fn get_transaction_info(
         &self,
         transaction_id: &str,
-    ) -> Result<JWSTransactionDecodedPayloadModel, GenericServerError> {
+    ) -> Result<JwsTransactionDecodedPayloadModel, GenericServerError> {
         cxt!("AppStoreServerApiDatasourceImpl::get_transaction_info");
         let production_url = format!(
             "https://api.storekit.itunes.apple.com/inApps/v1/transactions/{transaction_id}"

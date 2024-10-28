@@ -13,10 +13,10 @@ use crate::{
     },
     domain::{
         entities::{
-            iap_details::IapDetails, iap_id::IapId, iap_type::IapType,
+            iap_details::IapDetails, iap_purchase_id::IapPurchaseId,
             iap_update_notification::IapUpdateNotification,
         },
-        repositories::iap_repository::IapRepository,
+        repositories::iap_repository::{IapRepository, TypedProductId},
     },
     secrets::IapSecretsConfig,
 };
@@ -26,26 +26,28 @@ pub struct IapUtil<R: IapRepository> {
 }
 
 impl<R: IapRepository> IapUtil<R> {
-    pub fn verify_and_get_details(
+    pub async fn verify_and_get_details<T: TypedProductId>(
         &self,
-        id: IapId,
-        product_type: IapType,
-    ) -> Result<IapDetails, GenericServerError> {
-        self.iap_repository.verify_and_get_details(id, product_type)
+        product_id: T,
+        purchase_id: IapPurchaseId,
+    ) -> Result<IapDetails<T::DetailsType>, GenericServerError> {
+        self.iap_repository
+            .verify_and_get_details(product_id, purchase_id)
+            .await
     }
 
-    pub fn parse_apple_notification(
+    pub async fn parse_apple_notification(
         &self,
         body: &str,
     ) -> Result<IapUpdateNotification, GenericServerError> {
-        self.iap_repository.parse_apple_notification(body)
+        self.iap_repository.parse_apple_notification(body).await
     }
 
-    pub fn parse_google_notification(
+    pub async fn parse_google_notification(
         &self,
         body: &str,
     ) -> Result<IapUpdateNotification, GenericServerError> {
-        self.iap_repository.parse_google_notification(body)
+        self.iap_repository.parse_google_notification(body).await
     }
 }
 
@@ -61,14 +63,14 @@ impl
 {
     pub async fn new(
         secrets: SecretValues<IapSecretsConfig>,
-        bundle_id: &str,
+        application_id: String,
     ) -> Result<Self, GenericServerError> {
         Ok(Self {
             iap_repository: IapRepositoryImpl::new(
+                application_id,
                 secrets.get(&IapSecretsConfig::AppleApiKey)?,
                 secrets.get(&IapSecretsConfig::AppleKeyId)?,
                 secrets.get(&IapSecretsConfig::AppleIssuerId)?,
-                bundle_id,
                 secrets.get(&IapSecretsConfig::GoogleApiKey)?,
             )
             .await?,

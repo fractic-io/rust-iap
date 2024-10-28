@@ -34,8 +34,8 @@ pub(crate) mod data {
 pub mod domain {
     pub mod entities {
         pub mod iap_details;
-        pub mod iap_id;
-        pub mod iap_type;
+        pub mod iap_product_id;
+        pub mod iap_purchase_id;
         pub mod iap_update_notification;
     }
     pub mod repositories {

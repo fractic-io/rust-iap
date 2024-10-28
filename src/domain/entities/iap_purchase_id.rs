@@ -1,5 +1,5 @@
 #[derive(Debug)]
-pub enum IapId {
+pub enum IapPurchaseId {
     AppStoreTransactionId(String),
     GooglePlayPurchaseToken(String),
 }

@@ -1,7 +1,12 @@
-use super::{iap_details::IapDetails, iap_id::IapId};
+use super::{
+    iap_details::{ConsumableDetails, IapDetails},
+    iap_purchase_id::IapPurchaseId,
+};
 
 #[derive(Debug)]
-pub struct IapUpdateNotification {
-    pub id: IapId,
-    pub details: IapDetails,
+pub enum IapUpdateNotification {
+    TestConsumable {
+        purchase_id: Option<IapPurchaseId>,
+        details: Option<IapDetails<ConsumableDetails>>,
+    },
 }

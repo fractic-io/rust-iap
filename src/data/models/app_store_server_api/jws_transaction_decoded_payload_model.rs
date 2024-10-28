@@ -5,7 +5,7 @@ use serde_repr::Deserialize_repr;
 
 use super::common::{Environment, OfferDiscountType, OfferType};
 
-type TimestampType = u64;
+type TimestampType = i64;
 
 /// Data structure for the decoded payload of a JWSTransaction, returned by the
 /// App Store Server API.
@@ -16,7 +16,7 @@ type TimestampType = u64;
 /// reference, so reasonable assumptions are made.
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct JWSTransactionDecodedPayloadModel {
+pub struct JwsTransactionDecodedPayloadModel {
     /// A UUID you create at the time of purchase that associates the
     /// transaction with a customer on your own service. If your app doesn’t
     /// provide an appAccountToken, this string is empty. For more information,

@@ -5,7 +5,7 @@ use serde_repr::Deserialize_repr;
 
 use super::common::{Environment, OfferDiscountType, OfferType};
 
-type TimestampType = u64;
+type TimestampType = i64;
 
 /// Data structure for the decoded payload of a JWSRenewalInfo, returned by the
 /// App Store Server API.
@@ -16,7 +16,7 @@ type TimestampType = u64;
 /// reference, so reasonable assumptions are made.
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct JWSRenewalInfoDecodedPayloadModel {
+pub(crate) struct JwsRenewalInfoDecodedPayloadModel {
     /// The identifier of the product that renews at the next billing period.
     pub(crate) auto_renew_product_id: String,
     /// The renewal status of the auto-renewable subscription.

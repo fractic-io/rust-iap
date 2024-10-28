@@ -1,3 +1,4 @@
+use async_trait::async_trait;
 use fractic_generic_server_error::{cxt, GenericServerError};
 
 use crate::{
@@ -5,8 +6,8 @@ use crate::{
         datasources::utils::decode_jws_payload,
         models::{
             app_store_server_api::{
-                jws_renewal_info_decoded_payload_model::JWSRenewalInfoDecodedPayloadModel,
-                jws_transaction_decoded_payload_model::JWSTransactionDecodedPayloadModel,
+                jws_renewal_info_decoded_payload_model::JwsRenewalInfoDecodedPayloadModel,
+                jws_transaction_decoded_payload_model::JwsTransactionDecodedPayloadModel,
             },
             app_store_server_notifications::{
                 response_body_v2_decoded_payload_model::ResponseBodyV2DecodedPayloadModel,
@@ -17,7 +18,8 @@ use crate::{
     errors::AppStoreServerNotificationParseError,
 };
 
-pub(crate) trait AppStoreServerNotificationDatasource {
+#[async_trait]
+pub(crate) trait AppStoreServerNotificationDatasource: Send + Sync {
     /// Parse App Store Server Notification:
     /// https://developer.apple.com/documentation/appstoreservernotifications/app-store-server-notifications-v2
     ///
@@ -29,8 +31,8 @@ pub(crate) trait AppStoreServerNotificationDatasource {
     ) -> Result<
         (
             ResponseBodyV2DecodedPayloadModel,
-            Option<JWSTransactionDecodedPayloadModel>,
-            Option<JWSRenewalInfoDecodedPayloadModel>,
+            Option<JwsTransactionDecodedPayloadModel>,
+            Option<JwsRenewalInfoDecodedPayloadModel>,
         ),
         GenericServerError,
     >;
@@ -38,6 +40,7 @@ pub(crate) trait AppStoreServerNotificationDatasource {
 
 pub(crate) struct AppStoreServerNotificationDatasourceImpl;
 
+#[async_trait]
 impl AppStoreServerNotificationDatasource for AppStoreServerNotificationDatasourceImpl {
     async fn parse_notification(
         &self,
@@ -45,8 +48,8 @@ impl AppStoreServerNotificationDatasource for AppStoreServerNotificationDatasour
     ) -> Result<
         (
             ResponseBodyV2DecodedPayloadModel,
-            Option<JWSTransactionDecodedPayloadModel>,
-            Option<JWSRenewalInfoDecodedPayloadModel>,
+            Option<JwsTransactionDecodedPayloadModel>,
+            Option<JwsRenewalInfoDecodedPayloadModel>,
         ),
         GenericServerError,
     > {
@@ -60,12 +63,12 @@ impl AppStoreServerNotificationDatasource for AppStoreServerNotificationDatasour
         })?;
         let decoded_payload: ResponseBodyV2DecodedPayloadModel =
             decode_jws_payload(CXT, &wrapper.signed_payload)?;
-        let decoded_transaction_info: Option<JWSTransactionDecodedPayloadModel> = decoded_payload
+        let decoded_transaction_info: Option<JwsTransactionDecodedPayloadModel> = decoded_payload
             .data
             .as_ref()
             .map(|data| decode_jws_payload(CXT, &data.signed_transaction_info))
             .transpose()?;
-        let decoded_renewal_info: Option<JWSRenewalInfoDecodedPayloadModel> = decoded_payload
+        let decoded_renewal_info: Option<JwsRenewalInfoDecodedPayloadModel> = decoded_payload
             .data
             .as_ref()
             .map(|data| data.signed_renewal_info.as_ref())

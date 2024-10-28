@@ -5,7 +5,7 @@ use serde_repr::Deserialize_repr;
 
 use crate::data::models::app_store_server_api::common::Environment;
 
-type TimestampType = u64;
+type TimestampType = i64;
 type AppleIdType = u64;
 type JWSTransaction = String;
 type JWSRenewalInfo = String;

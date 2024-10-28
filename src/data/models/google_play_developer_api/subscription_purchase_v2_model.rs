@@ -11,7 +11,7 @@ use serde::Deserialize;
 /// reference, so reasonable assumptions are made.
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct SubscriptionPurchaseV2Model {
+pub struct SubscriptionPurchaseV2Model {
     /// This kind represents a SubscriptionPurchaseV2 object in the
     /// androidpublisher service.
     pub(crate) kind: Option<String>,
