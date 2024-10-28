@@ -6,7 +6,7 @@ use yup_oauth2::{parse_service_account_key, ServiceAccountAuthenticator};
 
 use crate::{
     data::models::google_play_developer_api::{
-        product_purchase_model::ProductPurchaseModel,
+        in_app_product_model::InAppProductModel, product_purchase_model::ProductPurchaseModel,
         subscription_purchase_v2_model::SubscriptionPurchaseV2Model,
     },
     errors::{GooglePlayDeveloperApiError, GooglePlayDeveloperApiKeyInvalid},
@@ -46,6 +46,19 @@ pub(crate) trait GooglePlayDeveloperApiDatasource: Send + Sync {
         package_name: &str,
         token: &str,
     ) -> Result<SubscriptionPurchaseV2Model, GenericServerError>;
+
+    /// inappproducts.get:
+    /// https://developers.google.com/android-publisher/api-ref/rest/v3/inappproducts/get
+    ///
+    /// packageName:
+    ///   Package name of the app.
+    /// sku:
+    ///   Unique identifier for the in-app product.
+    async fn get_in_app_product(
+        &self,
+        package_name: &str,
+        sku: &str,
+    ) -> Result<InAppProductModel, GenericServerError>;
 }
 
 pub(crate) struct GooglePlayDeveloperApiDatasourceImpl {
@@ -74,6 +87,16 @@ impl GooglePlayDeveloperApiDatasource for GooglePlayDeveloperApiDatasourceImpl {
         let url = format!("https://androidpublisher.googleapis.com/androidpublisher/v3/applications/{package_name}/purchases/subscriptionsv2/tokens/{token}");
         self.callout(CXT, &url, "purchases.subscriptionsv2.get")
             .await
+    }
+
+    async fn get_in_app_product(
+        &self,
+        package_name: &str,
+        sku: &str,
+    ) -> Result<InAppProductModel, GenericServerError> {
+        cxt!("GooglePlayDeveloperApiDatasourceImpl::get_in_app_product");
+        let url = format!("https://androidpublisher.googleapis.com/androidpublisher/v3/applications/{package_name}/inappproducts/{sku}");
+        self.callout(CXT, &url, "inappproducts.get").await
     }
 }
 
