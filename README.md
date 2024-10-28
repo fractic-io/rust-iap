@@ -18,11 +18,9 @@ To use API keys stored in AWS Secrets Manager:
 use fractic_aws_secrets::{
     define_secrets_config,
     env::{SECRETS_ID, SECRETS_REGION},
-    load_secrets, SecretValues, SecretsConfigEnum,
+    load_secrets, SecretsConfigEnum,
 };
-use fractic_env_config::{
-    define_env_config, load_env, EnvConfigEnum, EnvVariables,
-};
+use fractic_env_config::{define_env_config, load_env, EnvConfigEnum};
 use fractic_generic_server_error::GenericServerError;
 use fractic_iap::{
     domain::entities::{
@@ -30,8 +28,8 @@ use fractic_iap::{
         iap_product_id::{IapNonConsumableId, IapSubscriptionId},
         iap_purchase_id::IapPurchaseId,
         iap_update_notification::{IapUpdateNotification, NotificationDetails},
-    }
-    secrets::{GOOGLE_API_KEY, APPLE_API_KEY, APPLE_KEY_ID, APPLE_ISSUER_ID},
+    },
+    secrets::{APPLE_API_KEY, APPLE_ISSUER_ID, APPLE_KEY_ID, GOOGLE_API_KEY},
     util::IapUtil,
 };
 
@@ -98,12 +96,12 @@ async fn run() -> Result<(), GenericServerError> {
         .parse_apple_notification(raw_body)
         .await?;
     match notification.details {
-        NotificationDetails::Test => ...,
-        NotificationDetails::ConsumableVoided => ...,
-        NotificationDetails::NonConsumableVoided => ...,
-        NotificationDetails::SubscriptionEnded => ...,
-        NotificationDetails::SubscriptionExpiryChanged => ...,
-        ...
+        NotificationDetails::Test => {}
+        NotificationDetails::ConsumableVoided { .. } => { /* handler */ }
+        NotificationDetails::NonConsumableVoided { .. } => { /* handler */ }
+        NotificationDetails::SubscriptionEnded { .. } => { /* handler */ }
+        NotificationDetails::SubscriptionExpiryChanged { .. } => { /* handler */ }
+        /* etc. */
     }
 
     // Parse a notification from Google.
