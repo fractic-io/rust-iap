@@ -3,46 +3,71 @@ use chrono::{DateTime, Utc};
 use super::{
     iap_details::{ConsumableDetails, IapDetails, NonConsumableDetails, SubscriptionDetails},
     iap_product_id::{IapConsumableId, IapNonConsumableId, IapSubscriptionId},
+    iap_purchase_id::IapPurchaseId,
 };
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct IapUpdateNotification {
     pub notification_id: String,
-    pub application_id: String,
     pub time: DateTime<Utc>,
     pub details: NotificationDetails,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum NotificationDetails {
     Test,
     ConsumableVoided {
-        purchase_id: IapConsumableId,
+        application_id: String,
+        product_id: IapConsumableId,
+        purchase_id: IapPurchaseId,
         details: IapDetails<ConsumableDetails>,
         is_refunded: bool,
+        reason: Option<String>,
     },
     NonConsumableVoided {
-        purchase_id: IapNonConsumableId,
+        application_id: String,
+        product_id: IapNonConsumableId,
+        purchase_id: IapPurchaseId,
         details: IapDetails<NonConsumableDetails>,
         is_refunded: bool,
+        reason: Option<String>,
+    },
+    UnknownOneTimePurchaseVoided {
+        application_id: String,
+        purchase_id: IapPurchaseId,
+        is_refunded: bool,
+        reason: Option<String>,
+    },
+    SubscriptionStarted {
+        application_id: String,
+        product_id: IapSubscriptionId,
+        purchase_id: IapPurchaseId,
+        details: IapDetails<SubscriptionDetails>,
     },
     SubscriptionEnded {
-        purchase_id: IapSubscriptionId,
+        application_id: String,
+        product_id: IapSubscriptionId,
+        purchase_id: IapPurchaseId,
         details: IapDetails<SubscriptionDetails>,
         reason: SubscriptionEndReason,
     },
-    SubscriptionRenewed {
-        purchase_id: IapSubscriptionId,
+    /// Any events that change the expiry of the product, most commonly renewal,
+    /// but also includes things like grace periods.
+    SubscriptionExpiryChanged {
+        application_id: String,
+        product_id: IapSubscriptionId,
+        purchase_id: IapPurchaseId,
         details: IapDetails<SubscriptionDetails>,
     },
     Other,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum SubscriptionEndReason {
     Paused,
     Cancelled { reason: Option<String> },
     FailedToRenew,
     Voided { is_refunded: bool },
+    DeclinedPriceIncrease,
     Unknown,
 }

@@ -50,7 +50,7 @@ pub(crate) struct ResponseBodyV2DecodedPayloadModel {
     pub(crate) notification_uuid: String,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, PartialEq)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub(crate) enum NotificationType {
     /// A notification type that, along with its subtype, indicates that the
@@ -239,7 +239,7 @@ pub(crate) enum NotificationType {
     Unknown(String),
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, PartialEq)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub(crate) enum NotificationSubtype {
     /// Applies to the SUBSCRIBED notificationType. A notification with this

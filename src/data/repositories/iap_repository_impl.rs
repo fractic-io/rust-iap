@@ -19,6 +19,12 @@ use crate::{
         },
         models::{
             app_store_server_api::{self, jws_transaction_decoded_payload_model},
+            app_store_server_notifications::response_body_v2_decoded_payload_model::{
+                NotificationSubtype, NotificationType,
+            },
+            google_cloud_rtdn_notifications::developer_notification_model::{
+                SubscriptionNotificationType, VoidedPurchaseProductType, VoidedPurchaseRefundType,
+            },
             google_play_developer_api::{
                 in_app_product_model, product_purchase_model, subscription_purchase_v2_model,
             },
@@ -34,7 +40,9 @@ use crate::{
                 private::_ProductIdType, IapConsumableId, IapNonConsumableId, IapSubscriptionId,
             },
             iap_purchase_id::IapPurchaseId,
-            iap_update_notification::IapUpdateNotification,
+            iap_update_notification::{
+                IapUpdateNotification, NotificationDetails, SubscriptionEndReason,
+            },
         },
         repositories::iap_repository::{IapRepository, TypedProductId},
     },
@@ -114,14 +122,159 @@ impl<
         &self,
         body: &str,
     ) -> Result<IapUpdateNotification, GenericServerError> {
-        let (_notification, transaction_info, _subscription_renewal_info) = self
+        cxt!("IapRepositoryImpl::parse_apple_notification");
+        let (notification, transaction_info, _subscription_renewal_info) = self
             .app_store_server_notification_datasource
             .parse_notification(body)
             .await?;
-        Ok(IapUpdateNotification::TestConsumable {
-            purchase_id: transaction_info
-                .map(|t| IapPurchaseId::AppStoreTransactionId(t.transaction_id)),
-            details: None,
+        let expected_data_missing_err = || {
+            Err(AppStoreServerApiInvalidResponse::with_debug(
+                CXT,
+                "Notification did not contain expected data.",
+                format!("{:?}", notification.notification_type),
+            ))
+        };
+        let details = match (&notification.notification_type, &notification.subtype) {
+            (NotificationType::Test, _) => NotificationDetails::Test,
+
+            (NotificationType::Subscribed, _) => {
+                let (Some(data), Some(transaction_info)) = (notification.data, transaction_info)
+                else {
+                    return expected_data_missing_err();
+                };
+                NotificationDetails::SubscriptionStarted {
+                    application_id: data.bundle_id,
+                    product_id: IapSubscriptionId(transaction_info.product_id.clone()),
+                    purchase_id: IapPurchaseId::AppStoreTransactionId(
+                        transaction_info.transaction_id.clone(),
+                    ),
+                    details: IapDetails::from_apple_transaction::<IapSubscriptionId>(
+                        transaction_info,
+                        false,
+                    )?,
+                }
+            }
+
+            (NotificationType::DidRenew, _)
+            | (NotificationType::DidFailToRenew, Some(NotificationSubtype::GracePeriod))
+            | (NotificationType::RefundReversed, _) => {
+                let (Some(data), Some(transaction_info)) = (notification.data, transaction_info)
+                else {
+                    return expected_data_missing_err();
+                };
+                NotificationDetails::SubscriptionExpiryChanged {
+                    application_id: data.bundle_id,
+                    product_id: IapSubscriptionId(transaction_info.product_id.clone()),
+                    purchase_id: IapPurchaseId::AppStoreTransactionId(
+                        transaction_info.original_transaction_id.clone(),
+                    ),
+                    details: IapDetails::from_apple_transaction::<IapSubscriptionId>(
+                        transaction_info,
+                        false,
+                    )?,
+                }
+            }
+
+            (NotificationType::DidFailToRenew, _)
+            | (NotificationType::Expired, _)
+            | (NotificationType::GracePeriodExpired, _) => {
+                let (Some(data), Some(transaction_info)) = (notification.data, transaction_info)
+                else {
+                    return expected_data_missing_err();
+                };
+                NotificationDetails::SubscriptionEnded {
+                    application_id: data.bundle_id,
+                    product_id: IapSubscriptionId(transaction_info.product_id.clone()),
+                    purchase_id: IapPurchaseId::AppStoreTransactionId(
+                        transaction_info.original_transaction_id.clone(),
+                    ),
+                    details: IapDetails::from_apple_transaction::<IapSubscriptionId>(
+                        transaction_info,
+                        false,
+                    )?,
+                    reason: if notification.notification_type
+                        == NotificationType::GracePeriodExpired
+                        || notification.subtype == Some(NotificationSubtype::BillingRetry)
+                    {
+                        SubscriptionEndReason::FailedToRenew
+                    } else if notification.subtype == Some(NotificationSubtype::Voluntary) {
+                        SubscriptionEndReason::Cancelled { reason: None }
+                    } else if notification.subtype == Some(NotificationSubtype::PriceIncrease) {
+                        SubscriptionEndReason::DeclinedPriceIncrease
+                    } else {
+                        SubscriptionEndReason::Unknown
+                    },
+                }
+            }
+
+            (NotificationType::Refund, _) | (NotificationType::Revoke, _) => {
+                let (Some(data), Some(transaction_info)) = (notification.data, transaction_info)
+                else {
+                    return expected_data_missing_err();
+                };
+                match transaction_info.transaction_type {
+                    jws_transaction_decoded_payload_model::TransactionType::NonConsumable => {
+                        NotificationDetails::NonConsumableVoided {
+                            application_id: data.bundle_id,
+                            product_id: IapNonConsumableId(transaction_info.product_id.clone()),
+                            purchase_id: IapPurchaseId::AppStoreTransactionId(
+                                transaction_info.transaction_id.clone(),
+                            ),
+                            reason: Some(format!("{:?}", transaction_info.revocation_reason)),
+                            details: IapDetails::from_apple_transaction::<IapNonConsumableId>(
+                                transaction_info,
+                                false,
+                            )?,
+                            is_refunded: notification.notification_type == NotificationType::Refund,
+                        }
+                    }
+                    jws_transaction_decoded_payload_model::TransactionType::Consumable => {
+                        NotificationDetails::ConsumableVoided {
+                            application_id: data.bundle_id,
+                            product_id: IapConsumableId(transaction_info.product_id.clone()),
+                            purchase_id: IapPurchaseId::AppStoreTransactionId(
+                                transaction_info.transaction_id.clone(),
+                            ),
+                            reason: Some(format!("{:?}", transaction_info.revocation_reason)),
+                            details: IapDetails::from_apple_transaction::<IapConsumableId>(
+                                transaction_info,
+                                false,
+                            )?,
+                            is_refunded: notification.notification_type == NotificationType::Refund,
+                        }
+                    }
+                    _ => NotificationDetails::SubscriptionEnded {
+                        application_id: data.bundle_id,
+                        product_id: IapSubscriptionId(transaction_info.product_id.clone()),
+                        purchase_id: IapPurchaseId::AppStoreTransactionId(
+                            transaction_info.original_transaction_id.clone(),
+                        ),
+                        details: IapDetails::from_apple_transaction::<IapSubscriptionId>(
+                            transaction_info,
+                            false,
+                        )?,
+                        reason: SubscriptionEndReason::Voided {
+                            is_refunded: notification.notification_type == NotificationType::Refund,
+                        },
+                    },
+                }
+            }
+
+            (NotificationType::DidChangeRenewalPref, _)
+            | (NotificationType::DidChangeRenewalStatus, _)
+            | (NotificationType::OfferRedeemed, _)
+            | (NotificationType::PriceIncrease, _)
+            | (NotificationType::RefundDeclined, _)
+            | (NotificationType::RenewalExtended, _)
+            | (NotificationType::RenewalExtension, _)
+            | (NotificationType::ExternalPurchaseToken, _)
+            | (NotificationType::OneTimeCharge, _)
+            | (NotificationType::Unknown(_), _) => NotificationDetails::Other,
+        };
+        Ok(IapUpdateNotification {
+            notification_id: notification.notification_uuid,
+            time: notification.signed_date,
+            details,
         })
     }
 
@@ -130,32 +283,133 @@ impl<
         body: &str,
     ) -> Result<IapUpdateNotification, GenericServerError> {
         cxt!("IapRepositoryImpl::parse_google_notification");
-        let notification = self
+        let (wrapper, notification) = self
             .google_cloud_rtdn_notification_datasource
             .parse_notification(body)
             .await?;
-        if let Some(n) = notification.subscription_notification {
-            Ok(IapUpdateNotification::TestConsumable {
-                purchase_id: Some(IapPurchaseId::GooglePlayPurchaseToken(n.purchase_token)),
-                details: None,
-            })
-        } else if let Some(n) = notification.one_time_product_notification {
-            Ok(IapUpdateNotification::TestConsumable {
-                purchase_id: Some(IapPurchaseId::GooglePlayPurchaseToken(n.purchase_token)),
-                details: None,
-            })
+        let details = if let Some(_) = notification.test_notification {
+            NotificationDetails::Test
+        } else if let Some(n) = notification.subscription_notification {
+            let m = self
+                .google_play_developer_api_datasource
+                .get_subscription_purchase_v2(&notification.package_name, &n.purchase_token)
+                .await?;
+            let application_id = notification.package_name;
+            let product_id = IapSubscriptionId(
+                m.line_items
+                    .last()
+                    .ok_or_else(|| {
+                        GooglePlayDeveloperApiInvalidResponse::new(
+                            CXT,
+                            "Subscription did not have any line items.",
+                        )
+                    })?
+                    .product_id
+                    .clone(),
+            );
+            let purchase_id = IapPurchaseId::GooglePlayPurchaseToken(n.purchase_token);
+            match n.notification_type {
+                SubscriptionNotificationType::SubscriptionPurchased => {
+                    NotificationDetails::SubscriptionStarted {
+                        application_id,
+                        product_id,
+                        purchase_id,
+                        details: IapDetails::from_google_subscription_purchase::<IapSubscriptionId>(
+                            m, None,
+                        )?,
+                    }
+                }
+                SubscriptionNotificationType::SubscriptionRecovered
+                | SubscriptionNotificationType::SubscriptionRenewed
+                | SubscriptionNotificationType::SubscriptionInGracePeriod
+                | SubscriptionNotificationType::SubscriptionDeferred => {
+                    NotificationDetails::SubscriptionExpiryChanged {
+                        application_id,
+                        product_id,
+                        purchase_id,
+                        details: IapDetails::from_google_subscription_purchase::<IapSubscriptionId>(
+                            m, None,
+                        )?,
+                    }
+                }
+                SubscriptionNotificationType::SubscriptionOnHold
+                | SubscriptionNotificationType::SubscriptionPaused
+                | SubscriptionNotificationType::SubscriptionExpired
+                | SubscriptionNotificationType::SubscriptionRevoked => {
+                    NotificationDetails::SubscriptionEnded {
+                        application_id,
+                        product_id,
+                        purchase_id,
+                        reason: SubscriptionEndReason::Cancelled {
+                            reason: Some(format!("{:?}", m.canceled_state_context)),
+                        },
+                        details: IapDetails::from_google_subscription_purchase::<IapSubscriptionId>(
+                            m, None,
+                        )?,
+                    }
+                }
+                SubscriptionNotificationType::SubscriptionRestarted // Unrelated to expiry.
+                | SubscriptionNotificationType::SubscriptionCanceled // Unrelated to expiry.
+                | SubscriptionNotificationType::SubscriptionPriceChangeConfirmed
+                | SubscriptionNotificationType::SubscriptionPauseScheduleChanged
+                | SubscriptionNotificationType::SubscriptionPendingPurchaseCanceled => {
+                    NotificationDetails::Other
+                }
+            }
         } else if let Some(n) = notification.voided_purchase_notification {
-            Ok(IapUpdateNotification::TestConsumable {
-                purchase_id: Some(IapPurchaseId::GooglePlayPurchaseToken(n.purchase_token)),
-                details: None,
-            })
+            match n.product_type {
+                VoidedPurchaseProductType::ProductTypeOneTime => {
+                    NotificationDetails::UnknownOneTimePurchaseVoided {
+                        application_id: notification.package_name,
+                        purchase_id: IapPurchaseId::GooglePlayPurchaseToken(n.purchase_token),
+                        is_refunded: n.refund_type
+                            == VoidedPurchaseRefundType::RefundTypeFullRefund,
+                        reason: None,
+                    }
+                }
+                VoidedPurchaseProductType::ProductTypeSubscription => {
+                    let m = self
+                        .google_play_developer_api_datasource
+                        .get_subscription_purchase_v2(&notification.package_name, &n.purchase_token)
+                        .await?;
+                    NotificationDetails::SubscriptionEnded {
+                        application_id: notification.package_name,
+                        product_id: IapSubscriptionId(
+                            m.line_items
+                                .last()
+                                .ok_or_else(|| {
+                                    GooglePlayDeveloperApiInvalidResponse::new(
+                                        CXT,
+                                        "Subscription did not have any line items.",
+                                    )
+                                })?
+                                .product_id
+                                .clone(),
+                        ),
+                        purchase_id: IapPurchaseId::GooglePlayPurchaseToken(n.purchase_token),
+                        details: IapDetails::from_google_subscription_purchase::<IapSubscriptionId>(
+                            m, None,
+                        )?,
+                        reason: SubscriptionEndReason::Voided {
+                            is_refunded: n.refund_type
+                                == VoidedPurchaseRefundType::RefundTypeFullRefund,
+                        },
+                    }
+                }
+            }
+        } else if let Some(_) = notification.one_time_product_notification {
+            NotificationDetails::Other
         } else {
-            Err(GoogleCloudRtdnNotificationParseError::new(
+            return Err(GoogleCloudRtdnNotificationParseError::new(
                 CXT,
                 "Notification did not have one of the recognized types (subscription, one-time purchase, voided purchase, or test).",
-            )
-            .into())
-        }
+            ));
+        };
+        Ok(IapUpdateNotification {
+            notification_id: wrapper.message.message_id,
+            time: notification.event_time_millis,
+            details,
+        })
     }
 }
 

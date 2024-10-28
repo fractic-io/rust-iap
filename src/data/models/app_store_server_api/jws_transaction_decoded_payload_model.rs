@@ -98,7 +98,7 @@ pub struct JwsTransactionDecodedPayloadModel {
     pub(crate) transaction_reason: Option<TransactionReason>,
     /// The type of the in-app purchase.
     #[serde(rename = "type")]
-    pub(crate) transaction_type: Option<TransactionType>,
+    pub(crate) transaction_type: TransactionType,
     /// The unique identifier of subscription purchase events across devices,
     /// including subscription renewals.
     pub(crate) web_order_line_item_id: Option<String>,

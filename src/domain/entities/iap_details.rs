@@ -1,12 +1,12 @@
 use chrono::{DateTime, Utc};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum MaybeKnown<T> {
     Known(T),
     Unknown,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct PriceInfo {
     /// The price in micro-units, where 1,000,000 micro-units equal one unit of
     /// the currency.
@@ -15,7 +15,7 @@ pub struct PriceInfo {
     pub currency_iso_4217: String,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct IapDetails<T: IapTypeSpecificDetails> {
     pub is_active: bool,
     pub is_sandbox: bool,
@@ -32,16 +32,16 @@ impl IapTypeSpecificDetails for NonConsumableDetails {}
 impl IapTypeSpecificDetails for ConsumableDetails {}
 impl IapTypeSpecificDetails for SubscriptionDetails {}
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct NonConsumableDetails {}
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ConsumableDetails {
     pub is_consumed: MaybeKnown<bool>,
     pub quantity: i64,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct SubscriptionDetails {
     pub expiration_time: DateTime<Utc>,
 }

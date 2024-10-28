@@ -1,17 +1,11 @@
-#[derive(Debug)]
-pub struct IapNonConsumableId {
-    pub sku: String,
-}
+#[derive(Debug, Clone)]
+pub struct IapNonConsumableId(pub String);
 
-#[derive(Debug)]
-pub struct IapConsumableId {
-    pub sku: String,
-}
+#[derive(Debug, Clone)]
+pub struct IapConsumableId(pub String);
 
-#[derive(Debug)]
-pub struct IapSubscriptionId {
-    pub sku: String,
-}
+#[derive(Debug, Clone)]
+pub struct IapSubscriptionId(pub String);
 
 // Internal type sugar:
 // ----------------------------
@@ -36,7 +30,7 @@ pub(crate) mod private {
             _ProductIdType::Subscription
         }
         fn sku(&self) -> &str {
-            &self.sku
+            &self.0
         }
     }
 
@@ -45,7 +39,7 @@ pub(crate) mod private {
             _ProductIdType::Consumable
         }
         fn sku(&self) -> &str {
-            &self.sku
+            &self.0
         }
     }
 
@@ -54,7 +48,7 @@ pub(crate) mod private {
             _ProductIdType::NonConsumable
         }
         fn sku(&self) -> &str {
-            &self.sku
+            &self.0
         }
     }
 }

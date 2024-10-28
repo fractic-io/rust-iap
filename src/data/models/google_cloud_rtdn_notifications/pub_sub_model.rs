@@ -24,5 +24,5 @@ pub(crate) struct Message {
     pub(crate) attributes: HashMap<String, String>,
     /// Main data. Base64-encoded JSON object.
     pub(crate) data: String,
-    pub(crate) message_id: Option<String>,
+    pub(crate) message_id: String,
 }

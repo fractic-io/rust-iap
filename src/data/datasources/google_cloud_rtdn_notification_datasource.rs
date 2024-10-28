@@ -19,7 +19,7 @@ pub(crate) trait GoogleCloudRtdnNotificationDatasource: Send + Sync {
     async fn parse_notification(
         &self,
         notification: &str,
-    ) -> Result<DeveloperNotificationModel, GenericServerError>;
+    ) -> Result<(PubSubModel, DeveloperNotificationModel), GenericServerError>;
 }
 
 pub(crate) struct GoogleCloudRtdnNotificationDatasourceImpl;
@@ -29,7 +29,7 @@ impl GoogleCloudRtdnNotificationDatasource for GoogleCloudRtdnNotificationDataso
     async fn parse_notification(
         &self,
         notification: &str,
-    ) -> Result<DeveloperNotificationModel, GenericServerError> {
+    ) -> Result<(PubSubModel, DeveloperNotificationModel), GenericServerError> {
         cxt!("GoogleCloudRtdnNotificationDatasourceImpl::parse_notification");
         let wrapper: PubSubModel = serde_json::from_str(notification).map_err(|e| {
             GoogleCloudRtdnNotificationParseError::with_debug(
@@ -38,20 +38,25 @@ impl GoogleCloudRtdnNotificationDatasource for GoogleCloudRtdnNotificationDataso
                 format!("{:?}", e),
             )
         })?;
-        let decoded_message = BASE64_STANDARD.decode(wrapper.message.data).map_err(|e| {
-            GoogleCloudRtdnNotificationParseError::with_debug(
-                CXT,
-                "Failed to base64-decode notification struct.",
-                format!("{:?}", e),
-            )
-        })?;
-        serde_json::from_slice(&decoded_message).map_err(|e| {
-            GoogleCloudRtdnNotificationParseError::with_debug(
-                CXT,
-                "Failed to parse notification struct.",
-                format!("{:?}", e),
-            )
-        })
+        let decoded_message = BASE64_STANDARD
+            .decode(wrapper.message.data.clone())
+            .map_err(|e| {
+                GoogleCloudRtdnNotificationParseError::with_debug(
+                    CXT,
+                    "Failed to base64-decode notification struct.",
+                    format!("{:?}", e),
+                )
+            })?;
+        Ok((
+            wrapper,
+            serde_json::from_slice(&decoded_message).map_err(|e| {
+                GoogleCloudRtdnNotificationParseError::with_debug(
+                    CXT,
+                    "Failed to parse notification struct.",
+                    format!("{:?}", e),
+                )
+            })?,
+        ))
     }
 }
 
