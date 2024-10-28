@@ -698,9 +698,19 @@ impl NotificationDetails {
                 }
             }
 
+            // Perhaps counterintuitively, subscription cancellation and restart
+            // events are not important as they do not affect subscription
+            // expiry. After cancellation, the subscription will continue as
+            // normal until the expiry date, at which point an expiry
+            // notification is received and caught above. Since we fetch
+            // subscription information upon receiving those events, we will be
+            // able to see cancellation reason, etc., at that point, so we don't
+            // need to capture it now.
             gn::SubscriptionNotificationType::SubscriptionRestarted
-            | gn::SubscriptionNotificationType::SubscriptionCanceled
-            | gn::SubscriptionNotificationType::SubscriptionPriceChangeConfirmed
+            | gn::SubscriptionNotificationType::SubscriptionCanceled => NotificationDetails::Other,
+
+            // Changes that do not affect validity or expiry.
+            gn::SubscriptionNotificationType::SubscriptionPriceChangeConfirmed
             | gn::SubscriptionNotificationType::SubscriptionPauseScheduleChanged
             | gn::SubscriptionNotificationType::SubscriptionPendingPurchaseCanceled => {
                 NotificationDetails::Other
@@ -716,6 +726,9 @@ impl NotificationDetails {
         cxt!("NotificationDetails::from_google_voided_product_notification");
         Ok(match notification.product_type {
             gn::VoidedPurchaseProductType::ProductTypeOneTime => {
+                // Unfortunately, we don't have access to the product ID here,
+                // so we have no way to fetch the product details, or to
+                // determine if the product is a consumable / non-consumable.
                 NotificationDetails::UnknownOneTimePurchaseVoided {
                     application_id,
                     purchase_id: IapPurchaseId::GooglePlayPurchaseToken(
