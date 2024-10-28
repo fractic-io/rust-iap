@@ -70,7 +70,7 @@ async fn run() -> Result<(), GenericServerError> {
 
     // Load the utility.
     let iap_util =
-        IapUtil::new(secrets.clone_into()?, "com.example.appid".into()).await?;
+        IapUtil::from_secrets(secrets.clone_into()?, "com.example.appid".into()).await?;
 
     // Verify a purchase from Apple.
     let apple_purchase: IapDetails<NonConsumableDetails> = iap_util
@@ -123,11 +123,10 @@ To inline the API keys directly:
 
 ```rust
 use fractic_generic_server_error::GenericServerError;
-use fractic_iap::domain::repositories::iap_repository::IapRepository;
+use fractic_iap::util::IapUtil;
 
 async fn run() -> Result<(), GenericServerError> {
-    // Load the repository directly.
-    let iap_repository = IapRepository::new(
+    let iap_util = IapUtil::from_values(
         "com.example.appid".into(),
         "Apple API Key",
         "Apple Key ID",
@@ -135,7 +134,6 @@ async fn run() -> Result<(), GenericServerError> {
         "Google API Key",
     ).await?;
 
-    // Use with same interface as utility.
     let purchase = iap_repository
         .verify_and_get_details(
             ...

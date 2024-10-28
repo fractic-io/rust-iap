@@ -187,7 +187,7 @@ impl
         apple_api_key: &str,
         apple_key_id: &str,
         apple_issuer_id: &str,
-        google_play_api_key: &str,
+        google_api_key: &str,
     ) -> Result<Self, GenericServerError> {
         Ok(Self {
             app_store_server_api_datasource: AppStoreServerApiDatasourceImpl::new(
@@ -200,7 +200,7 @@ impl
             app_store_server_notification_datasource: AppStoreServerNotificationDatasourceImpl::new(
             ),
             google_play_developer_api_datasource: GooglePlayDeveloperApiDatasourceImpl::new(
-                google_play_api_key,
+                google_api_key,
             )
             .await?,
             google_cloud_rtdn_notification_datasource:

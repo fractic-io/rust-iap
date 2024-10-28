@@ -62,7 +62,7 @@ impl
         >,
     >
 {
-    pub async fn new(
+    pub async fn from_secrets(
         secrets: SecretValues<IapSecretsConfig>,
         application_id: String,
     ) -> Result<Self, GenericServerError> {
@@ -73,6 +73,25 @@ impl
                 secrets.get(&IapSecretsConfig::AppleKeyId)?,
                 secrets.get(&IapSecretsConfig::AppleIssuerId)?,
                 secrets.get(&IapSecretsConfig::GoogleApiKey)?,
+            )
+            .await?,
+        })
+    }
+
+    pub async fn from_values(
+        application_id: String,
+        apple_api_key: &str,
+        apple_key_id: &str,
+        apple_issuer_id: &str,
+        google_api_key: &str,
+    ) -> Result<Self, GenericServerError> {
+        Ok(Self {
+            iap_repository: IapRepositoryImpl::new(
+                application_id,
+                apple_api_key,
+                apple_key_id,
+                apple_issuer_id,
+                google_api_key,
             )
             .await?,
         })
