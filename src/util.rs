@@ -21,11 +21,16 @@ use crate::{
     secrets::IapSecretsConfig,
 };
 
-pub struct IapUtil<R: IapRepository> {
-    iap_repository: R,
+pub struct IapUtil {
+    iap_repository: IapRepositoryImpl<
+        AppStoreServerApiDatasourceImpl,
+        AppStoreServerNotificationDatasourceImpl,
+        GooglePlayDeveloperApiDatasourceImpl,
+        GoogleCloudRtdnNotificationDatasourceImpl,
+    >,
 }
 
-impl<R: IapRepository> IapUtil<R> {
+impl IapUtil {
     pub async fn verify_and_get_details<T: TypedProductId>(
         &self,
         product_id: T,
@@ -52,16 +57,7 @@ impl<R: IapRepository> IapUtil<R> {
     }
 }
 
-impl
-    IapUtil<
-        IapRepositoryImpl<
-            AppStoreServerApiDatasourceImpl,
-            AppStoreServerNotificationDatasourceImpl,
-            GooglePlayDeveloperApiDatasourceImpl,
-            GoogleCloudRtdnNotificationDatasourceImpl,
-        >,
-    >
-{
+impl IapUtil {
     pub async fn from_secrets(
         secrets: SecretValues<IapSecretsConfig>,
         application_id: String,
