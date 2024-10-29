@@ -49,6 +49,8 @@ use crate::{
     },
 };
 
+use MaybeKnown::*;
+
 pub(crate) struct IapRepositoryImpl<
     A: AppStoreServerApiDatasource,
     B: AppStoreServerNotificationDatasource,
@@ -217,9 +219,17 @@ impl<U: IapTypeSpecificDetails> IapDetails<U> {
     ) -> Result<Self, GenericServerError> {
         cxt!("IapDetails::from_apple_transaction");
         Ok(IapDetails {
-            is_active: m.revocation_date.is_none() && m.revocation_reason.is_none(),
+            // NOTE: For subscriptions, we should also check the expiry date.
+            // This field is only present for subscriptions, so assume true if
+            // it is not present (its presence for subscriptions is validated by
+            // subscription-specific parsing logic later on).
+            is_active: m.revocation_date.is_none()
+                && m.revocation_reason.is_none()
+                && m.expires_date
+                    .map(|expiry| expiry > chrono::Utc::now())
+                    .unwrap_or(true),
             is_sandbox: m.environment == app_store_server_api::common::Environment::Sandbox,
-            is_finalized_by_client: MaybeKnown::Unknown,
+            is_finalized_by_client: Unknown,
             purchase_time: m.purchase_date,
             region_iso3166_alpha_3: m.storefront.clone(), // Already in ISO 3166-1 alpha-3 format.
             price_info: if include_price_info {
@@ -252,7 +262,7 @@ impl<U: IapTypeSpecificDetails> IapDetails<U> {
         Ok(IapDetails {
             is_active: m.purchase_state == gp::PurchaseState::Purchased,
             is_sandbox: m.purchase_type == Some(gp::PurchaseType::Test),
-            is_finalized_by_client: MaybeKnown::Known(
+            is_finalized_by_client: Known(
                 m.acknowledgement_state == gp::AcknowledgementState::Acknowledged,
             ),
             purchase_time: m.purchase_time_millis,
@@ -280,16 +290,23 @@ impl<U: IapTypeSpecificDetails> IapDetails<U> {
     ) -> Result<Self, GenericServerError> {
         cxt!("IapDetails::from_google_subscription_purchase");
         Ok(IapDetails {
+            // NOTE: Certain states (ex. SubscriptionStateCanceled) may indicate
+            // the subscription is no longer being renewed, but it may still be
+            // active if it has not yet expired.
             is_active: (m.subscription_state == gs::SubscriptionState::SubscriptionStateActive
-                || m.subscription_state == gs::SubscriptionState::SubscriptionStateInGracePeriod),
+                || m.subscription_state == gs::SubscriptionState::SubscriptionStatePaused
+                || m.subscription_state == gs::SubscriptionState::SubscriptionStateOnHold
+                || m.subscription_state == gs::SubscriptionState::SubscriptionStateCanceled
+                || m.subscription_state == gs::SubscriptionState::SubscriptionStateInGracePeriod)
+                && m.line_items
+                    .iter()
+                    .any(|li| li.expiry_time > chrono::Utc::now()),
             is_sandbox: m.test_purchase.is_some(),
             is_finalized_by_client: match m.acknowledgement_state {
-                gs::AcknowledgementState::AcknowledgementStateAcknowledged => {
-                    MaybeKnown::Known(true)
-                }
-                gs::AcknowledgementState::AcknowledgementStatePending => MaybeKnown::Known(false),
+                gs::AcknowledgementState::AcknowledgementStateAcknowledged => Known(true),
+                gs::AcknowledgementState::AcknowledgementStatePending => Known(false),
                 gs::AcknowledgementState::Unknown(_)
-                | gs::AcknowledgementState::AcknowledgementStateUnspecified => MaybeKnown::Unknown,
+                | gs::AcknowledgementState::AcknowledgementStateUnspecified => Unknown,
             },
             purchase_time: m.start_time.ok_or_else(|| {
                 GooglePlayDeveloperApiInvalidResponse::new(
@@ -371,7 +388,7 @@ impl TypedProductId for IapConsumableId {
         m: &at::JwsTransactionDecodedPayloadModel,
     ) -> Result<Self::DetailsType, GenericServerError> {
         Ok(ConsumableDetails {
-            is_consumed: MaybeKnown::Unknown,
+            is_consumed: Unknown,
             quantity: m.quantity.map(|q| q as i64).unwrap_or(1),
         })
     }
@@ -380,7 +397,7 @@ impl TypedProductId for IapConsumableId {
         m: &gp::ProductPurchaseModel,
     ) -> Result<Self::DetailsType, GenericServerError> {
         Ok(ConsumableDetails {
-            is_consumed: MaybeKnown::Known(m.consumption_state == gp::ConsumptionState::Consumed),
+            is_consumed: Known(m.consumption_state == gp::ConsumptionState::Consumed),
             quantity: m.quantity.map(|q| q as i64).unwrap_or(1),
         })
     }
@@ -476,7 +493,8 @@ impl NotificationDetails {
                     an::NotificationType::DidFailToRenew,
                     Some(an::NotificationSubtype::GracePeriod),
                 )
-                | (an::NotificationType::RefundReversed, _) => {
+                | (an::NotificationType::RefundReversed, _)
+                | (an::NotificationType::RenewalExtended, _) => {
                     let (Some(data), Some(transaction_info)) =
                         (notification.data, transaction_info)
                     else {
@@ -488,6 +506,7 @@ impl NotificationDetails {
                         purchase_id: IapPurchaseId::AppStoreTransactionId(
                             transaction_info.original_transaction_id.clone(),
                         ),
+                        latest_renewal_id: transaction_info.transaction_id.clone(),
                         details: IapDetails::from_apple_transaction::<IapSubscriptionId>(
                             transaction_info,
                             false,
@@ -585,15 +604,16 @@ impl NotificationDetails {
                     }
                 }
 
+                // Changes that do not affect validity or expiry.
                 (an::NotificationType::DidChangeRenewalPref, _)
                 | (an::NotificationType::DidChangeRenewalStatus, _)
                 | (an::NotificationType::OfferRedeemed, _)
                 | (an::NotificationType::PriceIncrease, _)
                 | (an::NotificationType::RefundDeclined, _)
-                | (an::NotificationType::RenewalExtended, _)
                 | (an::NotificationType::RenewalExtension, _)
                 | (an::NotificationType::ExternalPurchaseToken, _)
                 | (an::NotificationType::OneTimeCharge, _)
+                | (an::NotificationType::ConsumptionRequest, _)
                 | (an::NotificationType::Unknown(_), _) => NotificationDetails::Other,
             },
         )
@@ -624,36 +644,35 @@ impl NotificationDetails {
         let purchase_id = IapPurchaseId::GooglePlayPurchaseToken(notification.purchase_token);
         Ok(match notification.notification_type {
             gn::SubscriptionNotificationType::SubscriptionPurchased => {
-                let details = IapDetails::from_google_subscription_purchase::<IapSubscriptionId>(
-                    api_data, None,
-                )?;
                 NotificationDetails::SubscriptionStarted {
                     application_id,
                     product_id,
                     purchase_id,
-                    details,
+                    details: IapDetails::from_google_subscription_purchase::<IapSubscriptionId>(
+                        api_data, None,
+                    )?,
                 }
             }
 
-            gn::SubscriptionNotificationType::SubscriptionRecovered
-            | gn::SubscriptionNotificationType::SubscriptionRenewed
+            gn::SubscriptionNotificationType::SubscriptionRenewed
+            | gn::SubscriptionNotificationType::SubscriptionRecovered
             | gn::SubscriptionNotificationType::SubscriptionInGracePeriod
             | gn::SubscriptionNotificationType::SubscriptionDeferred => {
-                let details = IapDetails::from_google_subscription_purchase::<IapSubscriptionId>(
-                    api_data, None,
-                )?;
                 NotificationDetails::SubscriptionExpiryChanged {
                     application_id,
                     product_id,
                     purchase_id,
-                    details,
+                    latest_renewal_id: api_data.latest_order_id.clone(),
+                    details: IapDetails::from_google_subscription_purchase::<IapSubscriptionId>(
+                        api_data, None,
+                    )?,
                 }
             }
 
-            gn::SubscriptionNotificationType::SubscriptionOnHold
+            gn::SubscriptionNotificationType::SubscriptionExpired
+            | gn::SubscriptionNotificationType::SubscriptionRevoked
             | gn::SubscriptionNotificationType::SubscriptionPaused
-            | gn::SubscriptionNotificationType::SubscriptionExpired
-            | gn::SubscriptionNotificationType::SubscriptionRevoked => {
+            | gn::SubscriptionNotificationType::SubscriptionOnHold => {
                 let reason = if notification.notification_type
                     == gn::SubscriptionNotificationType::SubscriptionPaused
                 {
@@ -686,14 +705,13 @@ impl NotificationDetails {
                 } else {
                     SubscriptionEndReason::Unknown
                 };
-                let details = IapDetails::from_google_subscription_purchase::<IapSubscriptionId>(
-                    api_data, None,
-                )?;
                 NotificationDetails::SubscriptionEnded {
                     application_id,
                     product_id,
                     purchase_id,
-                    details,
+                    details: IapDetails::from_google_subscription_purchase::<IapSubscriptionId>(
+                        api_data, None,
+                    )?,
                     reason,
                 }
             }
@@ -702,10 +720,19 @@ impl NotificationDetails {
             // events are not important as they do not affect subscription
             // expiry. After cancellation, the subscription will continue as
             // normal until the expiry date, at which point an expiry
-            // notification is received and caught above. Since we fetch
-            // subscription information upon receiving those events, we will be
-            // able to see cancellation reason, etc., at that point, so we don't
-            // need to capture it now.
+            // notification is received and caught above.
+            //
+            // To continue the confusing naming, pausing should technically be
+            // the same way, but pausing the subscription does not cause a
+            // SubscriptionPaused event. Rather, it causes a
+            // SubscriptionPauseScheduleChanged event, and the
+            // SubscriptionPaused event indicates the start of the actual pause
+            // period, which should not be ignored.
+            //
+            // Note on capturing cancellation reason:
+            //   Since we fetch the full subscription information upon receiving
+            //   an expiry event, we will be able to see cancellation reason at
+            //   that point, so we don't need to capture it now.
             gn::SubscriptionNotificationType::SubscriptionRestarted
             | gn::SubscriptionNotificationType::SubscriptionCanceled => NotificationDetails::Other,
 

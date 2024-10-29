@@ -226,6 +226,8 @@ pub(crate) enum NotificationType {
     /// This notification applies only to apps that use the External Purchase to
     /// provide alternative payment options.
     ExternalPurchaseToken,
+    /// Currently available only in the sandbox environment.
+    ///
     /// A notification type that indicates the customer purchased a consumable,
     /// non-consumable, or non-renewing subscription. The App Store also sends
     /// this notification when the customer receives access to a non-consumable
@@ -234,6 +236,11 @@ pub(crate) enum NotificationType {
     /// For notifications about auto-renewable subscription purchases, see the
     /// SUBSCRIBED notification type.
     OneTimeCharge,
+    /// A notification type that indicates that the customer initiated a refund
+    /// request for a consumable in-app purchase or auto-renewable subscription,
+    /// and the App Store is requesting that you provide consumption data. For
+    /// more information, see Send Consumption Information.
+    ConsumptionRequest,
 
     #[serde(untagged)]
     Unknown(String),

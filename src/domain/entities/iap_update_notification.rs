@@ -51,12 +51,18 @@ pub enum NotificationDetails {
         details: IapDetails<SubscriptionDetails>,
         reason: SubscriptionEndReason,
     },
-    /// Any events that change the expiry of the product, most commonly renewal,
-    /// but also includes things like grace periods.
+    /// Any events that change the expiry of a subscription. This is most
+    /// commonly renewal, but also includes things like grace periods.
     SubscriptionExpiryChanged {
         application_id: String,
         product_id: IapSubscriptionId,
         purchase_id: IapPurchaseId,
+        /// A store-specific identifier for the latest renewal transaction.
+        ///
+        /// For the first purchase, this value is the store-specific identifier
+        /// of the first purchase transaction (note: this may differ from
+        /// 'purchase_id').
+        latest_renewal_id: String,
         details: IapDetails<SubscriptionDetails>,
     },
     Other,
