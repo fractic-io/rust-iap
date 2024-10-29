@@ -45,3 +45,38 @@ pub struct ConsumableDetails {
 pub struct SubscriptionDetails {
     pub expiration_time: DateTime<Utc>,
 }
+
+pub trait IapGenericDetails {
+    fn is_active(&self) -> bool;
+    fn is_sandbox(&self) -> bool;
+    fn is_finalized_by_client(&self) -> MaybeKnown<bool>;
+    fn purchase_time(&self) -> DateTime<Utc>;
+    fn region_iso3166_alpha_3(&self) -> &str;
+    fn price_info(&self) -> Option<&PriceInfo>;
+}
+
+impl<T: IapTypeSpecificDetails> IapGenericDetails for IapDetails<T> {
+    fn is_active(&self) -> bool {
+        self.is_active
+    }
+
+    fn is_sandbox(&self) -> bool {
+        self.is_sandbox
+    }
+
+    fn is_finalized_by_client(&self) -> MaybeKnown<bool> {
+        self.is_finalized_by_client.clone()
+    }
+
+    fn purchase_time(&self) -> DateTime<Utc> {
+        self.purchase_time
+    }
+
+    fn region_iso3166_alpha_3(&self) -> &str {
+        &self.region_iso3166_alpha_3
+    }
+
+    fn price_info(&self) -> Option<&PriceInfo> {
+        self.price_info.as_ref()
+    }
+}
