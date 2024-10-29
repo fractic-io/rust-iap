@@ -1,6 +1,6 @@
 Rust utility for validating in-app purchases (IAP) made through the Apple App Store or Google Play Store, and parsing server-to-server change notifications (for refunds, subscription cancellations, etc.).
 
-It should be able to handle all purchase types (Consumable, NonConsumable, Subscription).
+It should be able to handle all purchase types (Consumable, NonConsumable, Subscription), and almost all server notification types. It currently does not support differentiating between different tiers of a given subscription (tier upgrade/downgrade notifications are ignored), since that's an Apple-only feature. Subscription price change notifications are also ignored, but could be added fairly easily.
 
 > NOTE:
 >

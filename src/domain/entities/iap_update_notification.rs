@@ -59,9 +59,10 @@ pub enum NotificationDetails {
         purchase_id: IapPurchaseId,
         /// A store-specific identifier for the latest renewal transaction.
         ///
-        /// For the first purchase, this value is the store-specific identifier
-        /// of the first purchase transaction (note: this may differ from
-        /// 'purchase_id').
+        /// If this notification occurs for a reason other than renewal, and
+        /// there has not yet been any past renewal at the time of notification,
+        /// this value is set to the store-specific identifier of the first
+        /// purchase transaction (note: this may differ from 'purchase_id').
         latest_renewal_id: String,
         details: IapDetails<SubscriptionDetails>,
     },

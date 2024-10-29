@@ -154,7 +154,7 @@ impl<
             .await?
         } else if let Some(voided_purchase_notification) = notification.voided_purchase_notification
         {
-            NotificationDetails::from_google_voided_product_notification(
+            NotificationDetails::from_google_voided_purchase_notification(
                 voided_purchase_notification,
                 application_id,
                 &self.google_play_developer_api_datasource,
@@ -745,7 +745,7 @@ impl NotificationDetails {
         })
     }
 
-    async fn from_google_voided_product_notification<T: GooglePlayDeveloperApiDatasource>(
+    async fn from_google_voided_purchase_notification<T: GooglePlayDeveloperApiDatasource>(
         notification: gn::VoidedPurchaseNotification,
         application_id: String,
         google_play_developer_api_datasource: &T,
