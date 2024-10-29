@@ -479,7 +479,7 @@ impl NotificationDetails {
                         application_id: data.bundle_id,
                         product_id: IapSubscriptionId(transaction_info.product_id.clone()),
                         purchase_id: IapPurchaseId::AppStoreTransactionId(
-                            transaction_info.transaction_id.clone(),
+                            transaction_info.original_transaction_id.clone(),
                         ),
                         details: IapDetails::from_apple_transaction::<IapSubscriptionId>(
                             transaction_info,
@@ -561,7 +561,7 @@ impl NotificationDetails {
                                 application_id: data.bundle_id,
                                 product_id: IapNonConsumableId(transaction_info.product_id.clone()),
                                 purchase_id: IapPurchaseId::AppStoreTransactionId(
-                                    transaction_info.transaction_id.clone(),
+                                    transaction_info.original_transaction_id.clone(),
                                 ),
                                 reason: Some(format!("{:?}", transaction_info.revocation_reason)),
                                 details: IapDetails::from_apple_transaction::<IapNonConsumableId>(
@@ -576,7 +576,7 @@ impl NotificationDetails {
                             application_id: data.bundle_id,
                             product_id: IapConsumableId(transaction_info.product_id.clone()),
                             purchase_id: IapPurchaseId::AppStoreTransactionId(
-                                transaction_info.transaction_id.clone(),
+                                transaction_info.original_transaction_id.clone(),
                             ),
                             reason: Some(format!("{:?}", transaction_info.revocation_reason)),
                             details: IapDetails::from_apple_transaction::<IapConsumableId>(
