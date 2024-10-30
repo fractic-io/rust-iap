@@ -506,7 +506,13 @@ impl NotificationDetails {
                         purchase_id: IapPurchaseId::AppStoreTransactionId(
                             transaction_info.original_transaction_id.clone(),
                         ),
-                        latest_renewal_id: transaction_info.transaction_id.clone(),
+                        renewal_id: if notification.notification_type
+                            == an::NotificationType::DidRenew
+                        {
+                            Some(transaction_info.transaction_id.clone())
+                        } else {
+                            None
+                        },
                         details: IapDetails::from_apple_transaction::<IapSubscriptionId>(
                             transaction_info,
                             false,
@@ -662,7 +668,15 @@ impl NotificationDetails {
                     application_id,
                     product_id,
                     purchase_id,
-                    latest_renewal_id: api_data.latest_order_id.clone(),
+                    renewal_id: if notification.notification_type
+                        == gn::SubscriptionNotificationType::SubscriptionRenewed
+                        || notification.notification_type
+                            == gn::SubscriptionNotificationType::SubscriptionRecovered
+                    {
+                        Some(api_data.latest_order_id.clone())
+                    } else {
+                        None
+                    },
                     details: IapDetails::from_google_subscription_purchase::<IapSubscriptionId>(
                         api_data, None,
                     )?,
