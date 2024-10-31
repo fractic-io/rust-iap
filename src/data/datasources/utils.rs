@@ -59,6 +59,10 @@ async fn validate_token(
     jwk_url: String,
     expected_aud: &str,
 ) -> Result<(), GenericServerError> {
+    // NOTE: Since we create a new RemoteJwksVerifier every time, we don't
+    // really benefit from the cache here. If this code gets lots of traffic in
+    // the future, it should probably be refactored to share the verifier
+    // between requests.
     let verifier = RemoteJwksVerifier::new(jwk_url, None, Duration::from_secs(300));
     let result = verifier
         .verify::<serde_json::Map<String, serde_json::Value>>(token)
