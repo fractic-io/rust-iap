@@ -80,6 +80,7 @@ async fn run() -> Result<(), GenericServerError> {
             IapNonConsumableId("product_sku".into()),
             IapPurchaseId::AppStoreTransactionId("transaction_id".into()),
             /* include_price_info: */ true,
+            /* error_if_not_active: */ true,
         )
         .await?;
 
@@ -89,6 +90,7 @@ async fn run() -> Result<(), GenericServerError> {
             IapSubscriptionId("product_sku".into()),
             IapPurchaseId::GooglePlayPurchaseToken("token".into()),
             /* include_price_info: */ true,
+            /* error_if_not_active: */ true,
         )
         .await?;
 

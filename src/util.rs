@@ -36,9 +36,15 @@ impl IapUtil {
         product_id: T,
         purchase_id: IapPurchaseId,
         include_price_info: bool,
+        error_if_not_active: bool,
     ) -> Result<IapDetails<T::DetailsType>, GenericServerError> {
         self.iap_repository
-            .verify_and_get_details(product_id, purchase_id, include_price_info)
+            .verify_and_get_details(
+                product_id,
+                purchase_id,
+                include_price_info,
+                error_if_not_active,
+            )
             .await
     }
 

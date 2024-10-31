@@ -45,7 +45,7 @@ use crate::{
     },
     errors::{
         AppStoreServerApiInvalidResponse, GoogleCloudRtdnNotificationParseError,
-        GooglePlayDeveloperApiInvalidResponse,
+        GooglePlayDeveloperApiInvalidResponse, NotActive,
     },
 };
 
@@ -77,15 +77,16 @@ impl<
         product_id: T,
         purchase_id: IapPurchaseId,
         include_price_info: bool,
+        error_if_not_active: bool,
     ) -> Result<IapDetails<T::DetailsType>, GenericServerError> {
         cxt!("IapRepositoryImpl::verify_and_get_details");
-        match purchase_id {
+        let iap_details = match purchase_id {
             IapPurchaseId::AppStoreTransactionId(transaction_id) => {
                 let m = self
                     .app_store_server_api_datasource
                     .get_transaction_info(&transaction_id)
                     .await?;
-                IapDetails::from_apple_transaction::<T>(m, include_price_info)
+                IapDetails::from_apple_transaction::<T>(m, include_price_info)?
             }
             IapPurchaseId::GooglePlayPurchaseToken(token) => {
                 let p = if include_price_info {
@@ -103,18 +104,22 @@ impl<
                             .google_play_developer_api_datasource
                             .get_product_purchase(&self.application_id, product_id.sku(), &token)
                             .await?;
-                        IapDetails::from_google_product_purchase::<T>(m, p)
+                        IapDetails::from_google_product_purchase::<T>(m, p)?
                     }
                     _ProductIdType::Subscription => {
                         let m = self
                             .google_play_developer_api_datasource
                             .get_subscription_purchase_v2(&self.application_id, &token)
                             .await?;
-                        IapDetails::from_google_subscription_purchase::<T>(m, p)
+                        IapDetails::from_google_subscription_purchase::<T>(m, p)?
                     }
                 }
             }
+        };
+        if error_if_not_active && !iap_details.is_active {
+            return Err(NotActive::default());
         }
+        Ok(iap_details)
     }
 
     async fn parse_apple_notification(

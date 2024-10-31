@@ -2,6 +2,12 @@ use fractic_generic_server_error::{
     define_internal_error_type, GenericServerError, GenericServerErrorTrait,
 };
 
+// General.
+define_internal_error_type!(
+    NotActive,
+    "In-app-purchase exists, but is not currently valid / active."
+);
+
 // Google Play Developer API.
 define_internal_error_type!(
     GooglePlayDeveloperApiKeyInvalid,
