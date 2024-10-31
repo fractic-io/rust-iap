@@ -5,7 +5,7 @@ use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use crate::{
     data::{
-        datasources::utils::decode_jws_payload,
+        datasources::utils::{decode_jws_payload, validate_apple_signature},
         models::app_store_server_api::{
             jws_transaction_decoded_payload_model::JwsTransactionDecodedPayloadModel,
             transaction_info_response_model::TransactionInfoResponseModel,
@@ -30,6 +30,7 @@ pub(crate) trait AppStoreServerApiDatasource: Send + Sync {
 
 pub(crate) struct AppStoreServerApiDatasourceImpl {
     jwt_token: String,
+    expected_aud: String,
 }
 
 #[async_trait]
@@ -48,6 +49,11 @@ impl AppStoreServerApiDatasource for AppStoreServerApiDatasourceImpl {
         let response_wrapper: TransactionInfoResponseModel = self
             .callout_with_sandbox_fallback(CXT, &production_url, &sandbox_url, "GetTransactionInfo")
             .await?;
+        validate_apple_signature(
+            &response_wrapper.signed_transaction_info,
+            &self.expected_aud,
+        )
+        .await?;
         decode_jws_payload(CXT, &response_wrapper.signed_transaction_info)
     }
 }
@@ -58,9 +64,11 @@ impl AppStoreServerApiDatasourceImpl {
         key_id: &str,
         issuer_id: &str,
         bundle_id: &str,
+        expected_aud: String,
     ) -> Result<Self, GenericServerError> {
         Ok(Self {
             jwt_token: Self::build_jwt_token(api_key, key_id, issuer_id, bundle_id).await?,
+            expected_aud,
         })
     }
 

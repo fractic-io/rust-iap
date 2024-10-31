@@ -42,6 +42,11 @@ impl IapUtil {
             .await
     }
 
+    /// Verify the notification authenticity (signed by Apple), and parse body
+    /// into a generic update notification.
+    ///
+    /// NOTE: To verify Apple's signature, this function calls out to Apple's
+    /// OAuth endpoint.
     pub async fn parse_apple_notification(
         &self,
         body: &str,
@@ -49,22 +54,32 @@ impl IapUtil {
         self.iap_repository.parse_apple_notification(body).await
     }
 
+    /// Verify the notification authenticity (signed by Google), and parse body
+    /// into a generic update notification.
+    ///
+    /// NOTE: To verify Google's signature, this function calls out to Google's
+    /// OAuth endpoint.
     pub async fn parse_google_notification(
         &self,
+        authorization_header: &str,
         body: &str,
     ) -> Result<IapUpdateNotification, GenericServerError> {
-        self.iap_repository.parse_google_notification(body).await
+        self.iap_repository
+            .parse_google_notification(authorization_header, body)
+            .await
     }
 }
 
 impl IapUtil {
     pub async fn from_secrets(
         secrets: SecretValues<IapSecretsConfig>,
-        application_id: String,
+        application_id: impl Into<String>,
+        aud_claim: impl Into<String>,
     ) -> Result<Self, GenericServerError> {
         Ok(Self {
             iap_repository: IapRepositoryImpl::new(
                 application_id,
+                aud_claim,
                 secrets.get(&IapSecretsConfig::AppleApiKey)?,
                 secrets.get(&IapSecretsConfig::AppleKeyId)?,
                 secrets.get(&IapSecretsConfig::AppleIssuerId)?,
@@ -75,7 +90,8 @@ impl IapUtil {
     }
 
     pub async fn from_values(
-        application_id: String,
+        application_id: impl Into<String>,
+        expected_aud: impl Into<String>,
         apple_api_key: &str,
         apple_key_id: &str,
         apple_issuer_id: &str,
@@ -84,6 +100,7 @@ impl IapUtil {
         Ok(Self {
             iap_repository: IapRepositoryImpl::new(
                 application_id,
+                expected_aud,
                 apple_api_key,
                 apple_key_id,
                 apple_issuer_id,

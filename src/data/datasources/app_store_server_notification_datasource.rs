@@ -3,7 +3,7 @@ use fractic_generic_server_error::{cxt, GenericServerError};
 
 use crate::{
     data::{
-        datasources::utils::decode_jws_payload,
+        datasources::utils::{decode_jws_payload, validate_apple_signature},
         models::{
             app_store_server_api::{
                 jws_renewal_info_decoded_payload_model::JwsRenewalInfoDecodedPayloadModel,
@@ -23,11 +23,11 @@ pub(crate) trait AppStoreServerNotificationDatasource: Send + Sync {
     /// Parse App Store Server Notification:
     /// https://developer.apple.com/documentation/appstoreservernotifications/app-store-server-notifications-v2
     ///
-    /// notification:
+    /// body:
     ///   The raw POST body of the notification.
     async fn parse_notification(
         &self,
-        notification: &str,
+        body: &str,
     ) -> Result<
         (
             ResponseBodyV2DecodedPayloadModel,
@@ -38,13 +38,15 @@ pub(crate) trait AppStoreServerNotificationDatasource: Send + Sync {
     >;
 }
 
-pub(crate) struct AppStoreServerNotificationDatasourceImpl;
+pub(crate) struct AppStoreServerNotificationDatasourceImpl {
+    expected_aud: String,
+}
 
 #[async_trait]
 impl AppStoreServerNotificationDatasource for AppStoreServerNotificationDatasourceImpl {
     async fn parse_notification(
         &self,
-        notification: &str,
+        body: &str,
     ) -> Result<
         (
             ResponseBodyV2DecodedPayloadModel,
@@ -54,13 +56,14 @@ impl AppStoreServerNotificationDatasource for AppStoreServerNotificationDatasour
         GenericServerError,
     > {
         cxt!("AppStoreServerNotificationDatasourceImpl::parse_notification");
-        let wrapper: ResponseBodyV2Model = serde_json::from_str(notification).map_err(|e| {
+        let wrapper: ResponseBodyV2Model = serde_json::from_str(body).map_err(|e| {
             AppStoreServerNotificationParseError::with_debug(
                 CXT,
                 "Failed to parse notification",
                 format!("{:?}", e),
             )
         })?;
+        validate_apple_signature(&wrapper.signed_payload, &self.expected_aud).await?;
         let decoded_payload: ResponseBodyV2DecodedPayloadModel =
             decode_jws_payload(CXT, &wrapper.signed_payload)?;
         let decoded_transaction_info: Option<JwsTransactionDecodedPayloadModel> = decoded_payload
@@ -84,7 +87,7 @@ impl AppStoreServerNotificationDatasource for AppStoreServerNotificationDatasour
 }
 
 impl AppStoreServerNotificationDatasourceImpl {
-    pub(crate) fn new() -> Self {
-        Self
+    pub(crate) fn new(expected_aud: String) -> Self {
+        Self { expected_aud }
     }
 }

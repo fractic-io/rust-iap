@@ -44,6 +44,7 @@ pub mod domain {
     }
 }
 
+pub mod constants;
 pub mod errors;
 pub mod secrets;
 pub mod util;

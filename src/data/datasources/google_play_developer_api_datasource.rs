@@ -12,6 +12,8 @@ use crate::{
     errors::{GooglePlayDeveloperApiError, GooglePlayDeveloperApiKeyInvalid},
 };
 
+use super::utils::validate_google_signature;
+
 #[async_trait]
 pub(crate) trait GooglePlayDeveloperApiDatasource: Send + Sync {
     /// purchases.products.get:
@@ -63,6 +65,7 @@ pub(crate) trait GooglePlayDeveloperApiDatasource: Send + Sync {
 
 pub(crate) struct GooglePlayDeveloperApiDatasourceImpl {
     access_token: String,
+    expected_aud: String,
 }
 
 #[async_trait]
@@ -101,9 +104,13 @@ impl GooglePlayDeveloperApiDatasource for GooglePlayDeveloperApiDatasourceImpl {
 }
 
 impl GooglePlayDeveloperApiDatasourceImpl {
-    pub(crate) async fn new(api_key: &str) -> Result<Self, GenericServerError> {
+    pub(crate) async fn new(
+        api_key: &str,
+        expected_aud: String,
+    ) -> Result<Self, GenericServerError> {
         Ok(Self {
             access_token: Self::build_access_token(api_key).await?,
+            expected_aud,
         })
     }
 
@@ -177,6 +184,19 @@ impl GooglePlayDeveloperApiDatasourceImpl {
                 ),
             ));
         }
+
+        validate_google_signature(
+            response
+                .headers()
+                .get(AUTHORIZATION)
+                .and_then(|a| a.to_str().ok())
+                .ok_or(GooglePlayDeveloperApiError::new(
+                    cxt,
+                    "Callout response is missing Authorization header.",
+                ))?,
+            &self.expected_aud,
+        )
+        .await?;
 
         response.json().await.map_err(|e| {
             GooglePlayDeveloperApiError::with_debug(

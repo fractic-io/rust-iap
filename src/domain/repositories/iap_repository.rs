@@ -49,6 +49,7 @@ pub trait IapRepository: Send + Sync {
 
     async fn parse_google_notification(
         &self,
+        authorization_header: &str,
         body: &str,
     ) -> Result<IapUpdateNotification, GenericServerError>;
 }

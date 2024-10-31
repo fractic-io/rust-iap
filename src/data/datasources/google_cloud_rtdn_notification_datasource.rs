@@ -3,8 +3,11 @@ use base64::{prelude::BASE64_STANDARD, Engine as _};
 use fractic_generic_server_error::{cxt, GenericServerError};
 
 use crate::{
-    data::models::google_cloud_rtdn_notifications::{
-        developer_notification_model::DeveloperNotificationModel, pub_sub_model::PubSubModel,
+    data::{
+        datasources::utils::validate_google_signature,
+        models::google_cloud_rtdn_notifications::{
+            developer_notification_model::DeveloperNotificationModel, pub_sub_model::PubSubModel,
+        },
     },
     errors::GoogleCloudRtdnNotificationParseError,
 };
@@ -14,24 +17,29 @@ pub(crate) trait GoogleCloudRtdnNotificationDatasource: Send + Sync {
     /// Parse Google Cloud RTDN Notification:
     /// https://developer.android.com/google/play/billing/rtdn-reference
     ///
-    /// notification:
+    /// body:
     ///   The raw POST body of the notification.
     async fn parse_notification(
         &self,
-        notification: &str,
+        authorization_header: &str,
+        body: &str,
     ) -> Result<(PubSubModel, DeveloperNotificationModel), GenericServerError>;
 }
 
-pub(crate) struct GoogleCloudRtdnNotificationDatasourceImpl;
+pub(crate) struct GoogleCloudRtdnNotificationDatasourceImpl {
+    expected_aud: String,
+}
 
 #[async_trait]
 impl GoogleCloudRtdnNotificationDatasource for GoogleCloudRtdnNotificationDatasourceImpl {
     async fn parse_notification(
         &self,
-        notification: &str,
+        authorization_header: &str,
+        body: &str,
     ) -> Result<(PubSubModel, DeveloperNotificationModel), GenericServerError> {
         cxt!("GoogleCloudRtdnNotificationDatasourceImpl::parse_notification");
-        let wrapper: PubSubModel = serde_json::from_str(notification).map_err(|e| {
+        validate_google_signature(authorization_header, &self.expected_aud).await?;
+        let wrapper: PubSubModel = serde_json::from_str(body).map_err(|e| {
             GoogleCloudRtdnNotificationParseError::with_debug(
                 CXT,
                 "Failed to parse Pub/Sub wrapper.",
@@ -61,7 +69,7 @@ impl GoogleCloudRtdnNotificationDatasource for GoogleCloudRtdnNotificationDataso
 }
 
 impl GoogleCloudRtdnNotificationDatasourceImpl {
-    pub(crate) fn new() -> Self {
-        Self
+    pub(crate) fn new(expected_aud: String) -> Self {
+        Self { expected_aud }
     }
 }

@@ -12,6 +12,7 @@ fractic-aws-secrets = { git = "https://github.com/fractic-io/rust-aws-secrets.gi
 fractic-generic-server-error = { git = "https://github.com/fractic-io/rust-generic-server-error.git" }
 jose-jws = "0.1.2"
 jsonwebtoken = "9.3.0"
+jwtk = "0.3.0"
 reqwest = { version = "0.12.8", default-features = false, features = ["rustls-tls", "json"] }
 rust_iso3166 = "0.1.13"
 serde = { version = "1.0.203", features = ["derive"] }

@@ -42,5 +42,13 @@ define_internal_error_type!(
     "Error parsing App Store Server notification."
 );
 
-// General.
-define_internal_error_type!(JwsError, "Unable to parse JWS.");
+// JWS / JWT decoding and signature verification.
+define_internal_error_type!(
+    InvalidGoogleSignature,
+    "Unable to verify the request was signed by Google."
+);
+define_internal_error_type!(
+    InvalidAppleSignature,
+    "Unable to verify the request was signed by Apple."
+);
+define_internal_error_type!(InvalidJws, "Unable to decode JWS payload.");

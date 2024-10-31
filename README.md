@@ -2,11 +2,7 @@ Rust utility for validating in-app purchases (IAP) made through the Apple App St
 
 It should be able to handle all purchase types (Consumable, NonConsumable, Subscription), and almost all server notification types. It currently does not support differentiating between different tiers of a given subscription (tier upgrade/downgrade notifications are ignored), since that's an Apple-only feature. Subscription price change notifications are also ignored, but could be added fairly easily.
 
-> NOTE:
->
-> The responses from the Apple API are returned in JWS (JSON Web Signature) format, which optionally allows the receiver to verify the authenticity and source of the message by verifying the signature against Apple's public key. That requires keeping the most up-to-date version of Apple's public key, keeping it cached, verifying the cryptographic signature, etc., which seems overkill for this library. We are already requesting data specifically from apple.com, and receiving the data over HTTPS, so the additional cryptography logic seems unnecessary. It may be something to add in the future. On the other hand, Google's API doesn't even provide a signature to verify.
-
-This code is provided as-is. For the time being, attention will not be given to backwards compatibility or clear documentation. It is open-sourced mainly for the chance that snippets may be useful to others looking to do similar tasks. Eventually, this may become a real library, well-documented, etc., for uploading to crates.io. If you'd like to make that happen, feel free to submit pull requests.
+This code is provided as-is. For the time being, attention will not be given to backwards compatibility or clear documentation. It is open-sourced mainly for the chance that snippets may be useful to others looking to do similar tasks. Eventually, this may become a real library, well-documented, etc., for uploading to crates.io.
 
 ## Usage
 
@@ -69,8 +65,14 @@ async fn run() -> Result<(), GenericServerError> {
     let secrets = load_secrets::<SecretsConfig>(env.clone_into()?).await?;
 
     // Load the utility.
-    let iap_util =
-        IapUtil::from_secrets(secrets.clone_into()?, "com.example.appid".into()).await?;
+    let iap_util = IapUtil::from_secrets(
+        secrets.clone_into()?,
+        // Application ID (also referred to as bundle ID or package name).
+        "com.example.appid",
+        // When validating API payloads, only tokens with matching 'aud' claim
+        // will be accepted.
+        "<expected_aud_claim>"
+    ).await?;
 
     // Verify a purchase from Apple.
     let apple_purchase: IapDetails<NonConsumableDetails> = iap_util
@@ -91,9 +93,9 @@ async fn run() -> Result<(), GenericServerError> {
         .await?;
 
     // Parse a notification from Apple.
-    let raw_body: &str = "...";
+    let body: &str = "...";
     let notification: IapUpdateNotification = iap_util
-        .parse_apple_notification(raw_body)
+        .parse_apple_notification(body)
         .await?;
     match notification.details {
         NotificationDetails::Test => {}
@@ -105,9 +107,10 @@ async fn run() -> Result<(), GenericServerError> {
     }
 
     // Parse a notification from Google.
-    let raw_body: &str = "...";
+    let authorization: &str = "..."; // Request's "Authorization" header.
+    let body: &str = "...";
     let google_notification: IapUpdateNotification = iap_util
-        .parse_google_notification(raw_body)
+        .parse_google_notification(authorization, body)
         .await?;
     match notification.details {
         ...
@@ -127,7 +130,8 @@ use fractic_iap::util::IapUtil;
 
 async fn run() -> Result<(), GenericServerError> {
     let iap_util = IapUtil::from_values(
-        "com.example.appid".into(),
+        "com.example.appid",
+        "<expected_aud_claim>",
         "Apple API Key",
         "Apple Key ID",
         "Apple Issuer ID",

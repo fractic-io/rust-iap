@@ -135,12 +135,13 @@ impl<
 
     async fn parse_google_notification(
         &self,
+        authorization_header: &str,
         body: &str,
     ) -> Result<IapUpdateNotification, GenericServerError> {
         cxt!("IapRepositoryImpl::parse_google_notification");
         let (wrapper, notification) = self
             .google_cloud_rtdn_notification_datasource
-            .parse_notification(body)
+            .parse_notification(authorization_header, body)
             .await?;
         let application_id = notification.package_name.clone();
         let details = if let Some(_) = notification.test_notification {
@@ -185,28 +186,34 @@ impl
     >
 {
     pub(crate) async fn new(
-        application_id: String,
+        application_id: impl Into<String>,
+        expected_aud: impl Into<String>,
         apple_api_key: &str,
         apple_key_id: &str,
         apple_issuer_id: &str,
         google_api_key: &str,
     ) -> Result<Self, GenericServerError> {
+        let application_id = application_id.into();
+        let expected_aud = expected_aud.into();
         Ok(Self {
             app_store_server_api_datasource: AppStoreServerApiDatasourceImpl::new(
                 apple_api_key,
                 apple_key_id,
                 apple_issuer_id,
                 &application_id,
+                expected_aud.clone(),
             )
             .await?,
             app_store_server_notification_datasource: AppStoreServerNotificationDatasourceImpl::new(
+                expected_aud.clone(),
             ),
             google_play_developer_api_datasource: GooglePlayDeveloperApiDatasourceImpl::new(
                 google_api_key,
+                expected_aud.clone(),
             )
             .await?,
             google_cloud_rtdn_notification_datasource:
-                GoogleCloudRtdnNotificationDatasourceImpl::new(),
+                GoogleCloudRtdnNotificationDatasourceImpl::new(expected_aud),
             application_id,
         })
     }
