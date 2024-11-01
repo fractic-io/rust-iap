@@ -40,7 +40,6 @@ pub trait IapRepository: Send + Sync {
         product_id: T,
         purchase_id: IapPurchaseId,
         include_price_info: bool,
-        error_if_not_active: bool,
     ) -> Result<IapDetails<T::DetailsType>, GenericServerError>;
 
     async fn parse_apple_notification(

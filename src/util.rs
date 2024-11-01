@@ -31,20 +31,23 @@ pub struct IapUtil {
 }
 
 impl IapUtil {
+    /// Verify the authenticity of a purchase, and return the purchase details retrieved
+    /// from the respective platform's API, abstracted into a platform-generic struct.
+    ///
+    /// If 'include_price_info' is true, the price and currency information will
+    /// also be populated. For Google Play purchases, this requires an
+    /// additional callout.
+    ///
+    /// This callout will fail if the purchase does not exist, or if it is not
+    /// in an active state (ex. voided or subscription cancelled).
     pub async fn verify_and_get_details<T: TypedProductId>(
         &self,
         product_id: T,
         purchase_id: IapPurchaseId,
         include_price_info: bool,
-        error_if_not_active: bool,
     ) -> Result<IapDetails<T::DetailsType>, GenericServerError> {
         self.iap_repository
-            .verify_and_get_details(
-                product_id,
-                purchase_id,
-                include_price_info,
-                error_if_not_active,
-            )
+            .verify_and_get_details(product_id, purchase_id, include_price_info)
             .await
     }
 

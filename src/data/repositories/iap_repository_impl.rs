@@ -77,7 +77,6 @@ impl<
         product_id: T,
         purchase_id: IapPurchaseId,
         include_price_info: bool,
-        error_if_not_active: bool,
     ) -> Result<IapDetails<T::DetailsType>, GenericServerError> {
         cxt!("IapRepositoryImpl::verify_and_get_details");
         let iap_details = match purchase_id {
@@ -116,7 +115,7 @@ impl<
                 }
             }
         };
-        if error_if_not_active && !iap_details.is_active {
+        if !iap_details.is_active {
             return Err(NotActive::default());
         }
         Ok(iap_details)
