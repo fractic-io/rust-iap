@@ -11,12 +11,11 @@ This code is provided as-is. For the time being, attention will not be given to 
 To use API keys stored in AWS Secrets Manager:
 
 ```rust
-use fractic_aws_secrets::{
-    define_secrets_config,
-    env::{SECRETS_ID, SECRETS_REGION},
-    load_secrets, SecretsConfigEnum,
+use fractic_env_config::{
+    define_env_config, define_secrets_config,
+    EnvConfigEnum, load_env, load_secrets,
+    SecretsConfigEnum, SECRETS_ID, SECRETS_REGION,
 };
-use fractic_env_config::{define_env_config, load_env, EnvConfigEnum};
 use fractic_generic_server_error::GenericServerError;
 use fractic_iap::{
     domain::entities::{
@@ -29,7 +28,7 @@ use fractic_iap::{
     util::IapUtil,
 };
 
-// The set-up below causes the fractic-aws-secrets library to fetch secret ID
+// The set-up below causes the fractic-env-config library to fetch secret ID
 // "SECRETS_ID" from region "SECRETS_REGION", and expects it to be structured as
 // JSON with the keys "GOOGLE_API_KEY", "APPLE_API_KEY", ...
 // ---------------------------------------------------------
@@ -38,7 +37,7 @@ use fractic_iap::{
 //
 // This config causes the fractic-env-config library to fetch the environment
 // variables "SECRETS_REGION" and "SECRETS_ID", which are the minimum keys
-// required for the config to be accepted by fractic-aws-secrets.
+// required for the config to be accepted by load_secrets(...).
 define_env_config!(
     EnvConfig,
     SecretsRegion => SECRETS_REGION,
@@ -47,7 +46,7 @@ define_env_config!(
 
 // Set up secrets.
 //
-// This config causes the fractic-aws-secrets library to fetch the keys
+// This config causes the fractic-env_config library to fetch the keys
 // "GOOGLE_API_KEY", "APPLE_API_KEY", ..., from the AWS Secrets Manager secret
 // JSON at "SECRETS_ID", which are the minimum keys required for the config to
 // be accepted by the IAP util.
