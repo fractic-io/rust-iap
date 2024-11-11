@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use fractic_generic_server_error::{cxt, GenericServerError};
+use fractic_server_error::{cxt, GenericServerError};
 use jose_jws::Jws;
 use jwtk::{jwk::RemoteJwksVerifier, OneOrMany};
 use serde::de::DeserializeOwned;

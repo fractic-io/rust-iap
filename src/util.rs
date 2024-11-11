@@ -1,5 +1,5 @@
 use fractic_env_config::SecretValues;
-use fractic_generic_server_error::GenericServerError;
+use fractic_server_error::GenericServerError;
 
 use crate::{
     data::{

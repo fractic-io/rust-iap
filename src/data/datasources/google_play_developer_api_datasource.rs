@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use fractic_generic_server_error::{cxt, GenericServerError};
+use fractic_server_error::{cxt, GenericServerError};
 use reqwest::header::AUTHORIZATION;
 use serde::de::DeserializeOwned;
 use yup_oauth2::{parse_service_account_key, ServiceAccountAuthenticator};

@@ -9,7 +9,7 @@ async-trait = "0.1.83"
 base64 = "0.22.1"
 chrono = { version = "0.4.38", features = ["serde"] }
 fractic-env-config = { git = "https://github.com/fractic-io/rust-env-config.git" }
-fractic-generic-server-error = { git = "https://github.com/fractic-io/rust-generic-server-error.git" }
+fractic-server-error = { git = "https://github.com/fractic-io/rust-server-error.git" }
 jose-jws = "0.1.2"
 jsonwebtoken = "9.3.0"
 jwtk = "0.3.0"

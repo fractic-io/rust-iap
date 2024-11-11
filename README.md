@@ -16,7 +16,7 @@ use fractic_env_config::{
     EnvConfigEnum, load_env, load_secrets,
     SecretsConfigEnum, SECRETS_ID, SECRETS_REGION,
 };
-use fractic_generic_server_error::GenericServerError;
+use fractic_server_error::GenericServerError;
 use fractic_iap::{
     domain::entities::{
         iap_details::{IapDetails, NonConsumableDetails, SubscriptionDetails},
@@ -126,7 +126,7 @@ async fn run() -> Result<(), GenericServerError> {
 To inline the API keys directly:
 
 ```rust
-use fractic_generic_server_error::GenericServerError;
+use fractic_server_error::GenericServerError;
 use fractic_iap::util::IapUtil;
 
 async fn run() -> Result<(), GenericServerError> {

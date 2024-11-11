@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use base64::{prelude::BASE64_STANDARD, Engine as _};
-use fractic_generic_server_error::{cxt, GenericServerError};
+use fractic_server_error::{cxt, GenericServerError};
 
 use crate::{
     data::{
