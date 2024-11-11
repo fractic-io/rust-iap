@@ -1,4 +1,4 @@
-use fractic_aws_secrets::SecretValues;
+use fractic_env_config::SecretValues;
 use fractic_generic_server_error::GenericServerError;
 
 use crate::{

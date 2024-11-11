@@ -1,4 +1,4 @@
-use fractic_aws_secrets::{define_secret_key, define_secrets_config, SecretsConfigEnum};
+use fractic_env_config::{define_secret_key, define_secrets_config, SecretsConfigEnum};
 
 define_secret_key!(GOOGLE_API_KEY);
 define_secret_key!(APPLE_API_KEY);
