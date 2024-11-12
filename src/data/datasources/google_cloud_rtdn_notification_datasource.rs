@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use base64::{prelude::BASE64_STANDARD, Engine as _};
-use fractic_server_error::{cxt, GenericServerError};
+use fractic_server_error::ServerError;
 
 use crate::{
     data::{
@@ -23,7 +23,7 @@ pub(crate) trait GoogleCloudRtdnNotificationDatasource: Send + Sync {
         &self,
         authorization_header: &str,
         body: &str,
-    ) -> Result<(PubSubModel, DeveloperNotificationModel), GenericServerError>;
+    ) -> Result<(PubSubModel, DeveloperNotificationModel), ServerError>;
 }
 
 pub(crate) struct GoogleCloudRtdnNotificationDatasourceImpl {
@@ -36,32 +36,28 @@ impl GoogleCloudRtdnNotificationDatasource for GoogleCloudRtdnNotificationDataso
         &self,
         authorization_header: &str,
         body: &str,
-    ) -> Result<(PubSubModel, DeveloperNotificationModel), GenericServerError> {
-        cxt!("GoogleCloudRtdnNotificationDatasourceImpl::parse_notification");
+    ) -> Result<(PubSubModel, DeveloperNotificationModel), ServerError> {
         validate_google_signature(authorization_header, &self.expected_aud).await?;
         let wrapper: PubSubModel = serde_json::from_str(body).map_err(|e| {
             GoogleCloudRtdnNotificationParseError::with_debug(
-                CXT,
                 "Failed to parse Pub/Sub wrapper.",
-                format!("{:?}", e),
+                &e,
             )
         })?;
         let decoded_message = BASE64_STANDARD
             .decode(wrapper.message.data.clone())
             .map_err(|e| {
                 GoogleCloudRtdnNotificationParseError::with_debug(
-                    CXT,
                     "Failed to base64-decode notification struct.",
-                    format!("{:?}", e),
+                    &e,
                 )
             })?;
         Ok((
             wrapper,
             serde_json::from_slice(&decoded_message).map_err(|e| {
                 GoogleCloudRtdnNotificationParseError::with_debug(
-                    CXT,
                     "Failed to parse notification struct.",
-                    format!("{:?}", e),
+                    &e,
                 )
             })?,
         ))

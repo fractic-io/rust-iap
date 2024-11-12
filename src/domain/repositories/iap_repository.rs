@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use fractic_server_error::GenericServerError;
+use fractic_server_error::ServerError;
 
 use crate::{
     data::models::{
@@ -22,15 +22,15 @@ pub trait TypedProductId: IapProductId {
 
     fn extract_details_from_apple_transaction(
         m: &JwsTransactionDecodedPayloadModel,
-    ) -> Result<Self::DetailsType, GenericServerError>;
+    ) -> Result<Self::DetailsType, ServerError>;
 
     fn extract_details_from_google_product_purchase(
         m: &ProductPurchaseModel,
-    ) -> Result<Self::DetailsType, GenericServerError>;
+    ) -> Result<Self::DetailsType, ServerError>;
 
     fn extract_details_from_google_subscription_purchase(
         m: &SubscriptionPurchaseV2Model,
-    ) -> Result<Self::DetailsType, GenericServerError>;
+    ) -> Result<Self::DetailsType, ServerError>;
 }
 
 #[async_trait]
@@ -40,16 +40,16 @@ pub trait IapRepository: Send + Sync {
         product_id: T,
         purchase_id: IapPurchaseId,
         include_price_info: bool,
-    ) -> Result<IapDetails<T::DetailsType>, GenericServerError>;
+    ) -> Result<IapDetails<T::DetailsType>, ServerError>;
 
     async fn parse_apple_notification(
         &self,
         body: &str,
-    ) -> Result<IapUpdateNotification, GenericServerError>;
+    ) -> Result<IapUpdateNotification, ServerError>;
 
     async fn parse_google_notification(
         &self,
         authorization_header: &str,
         body: &str,
-    ) -> Result<IapUpdateNotification, GenericServerError>;
+    ) -> Result<IapUpdateNotification, ServerError>;
 }

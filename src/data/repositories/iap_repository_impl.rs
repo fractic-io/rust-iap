@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use fractic_server_error::{cxt, GenericServerError};
+use fractic_server_error::ServerError;
 
 use crate::{
     data::{
@@ -77,8 +77,7 @@ impl<
         product_id: T,
         purchase_id: IapPurchaseId,
         include_price_info: bool,
-    ) -> Result<IapDetails<T::DetailsType>, GenericServerError> {
-        cxt!("IapRepositoryImpl::verify_and_get_details");
+    ) -> Result<IapDetails<T::DetailsType>, ServerError> {
         let iap_details = match purchase_id {
             IapPurchaseId::AppStoreTransactionId(transaction_id) => {
                 let m = self
@@ -116,7 +115,7 @@ impl<
             }
         };
         if !iap_details.is_active {
-            return Err(NotActive::default());
+            return Err(NotActive::new());
         }
         Ok(iap_details)
     }
@@ -124,8 +123,7 @@ impl<
     async fn parse_apple_notification(
         &self,
         body: &str,
-    ) -> Result<IapUpdateNotification, GenericServerError> {
-        cxt!("IapRepositoryImpl::parse_apple_notification");
+    ) -> Result<IapUpdateNotification, ServerError> {
         let (notification, transaction_info, _subscription_renewal_info) = self
             .app_store_server_notification_datasource
             .parse_notification(body)
@@ -141,8 +139,7 @@ impl<
         &self,
         authorization_header: &str,
         body: &str,
-    ) -> Result<IapUpdateNotification, GenericServerError> {
-        cxt!("IapRepositoryImpl::parse_google_notification");
+    ) -> Result<IapUpdateNotification, ServerError> {
         let (wrapper, notification) = self
             .google_cloud_rtdn_notification_datasource
             .parse_notification(authorization_header, body)
@@ -169,7 +166,6 @@ impl<
             NotificationDetails::Other
         } else {
             return Err(GoogleCloudRtdnNotificationParseError::new(
-                CXT,
                 "Notification did not have one of the recognized types (subscription, one-time purchase, voided purchase, or test).",
             ));
         };
@@ -196,7 +192,7 @@ impl
         apple_key_id: &str,
         apple_issuer_id: &str,
         google_api_key: &str,
-    ) -> Result<Self, GenericServerError> {
+    ) -> Result<Self, ServerError> {
         let application_id = application_id.into();
         let expected_aud = expected_aud.into();
         Ok(Self {
@@ -227,8 +223,7 @@ impl<U: IapTypeSpecificDetails> IapDetails<U> {
     fn from_apple_transaction<T: TypedProductId<DetailsType = U>>(
         m: at::JwsTransactionDecodedPayloadModel,
         include_price_info: bool,
-    ) -> Result<Self, GenericServerError> {
-        cxt!("IapDetails::from_apple_transaction");
+    ) -> Result<Self, ServerError> {
         Ok(IapDetails {
             // NOTE: For subscriptions, we should also check the expiry date.
             // This field is only present for subscriptions, so assume true if
@@ -247,13 +242,11 @@ impl<U: IapTypeSpecificDetails> IapDetails<U> {
                 Some(PriceInfo {
                     price_micros: m.price.ok_or_else(|| {
                         AppStoreServerApiInvalidResponse::new(
-                            CXT,
                             "Transaction did not contain price info.",
                         )
                     })? * 1000,
                     currency_iso_4217: m.currency.clone().ok_or_else(|| {
                         AppStoreServerApiInvalidResponse::new(
-                            CXT,
                             "Transaction did not contain currency info.",
                         )
                     })?, // Already in ISO 4217 format.
@@ -268,8 +261,7 @@ impl<U: IapTypeSpecificDetails> IapDetails<U> {
     fn from_google_product_purchase<T: TypedProductId<DetailsType = U>>(
         m: gp::ProductPurchaseModel,
         p: Option<gi::InAppProductModel>,
-    ) -> Result<Self, GenericServerError> {
-        cxt!("IapDetails::from_google_product_purchase");
+    ) -> Result<Self, ServerError> {
         Ok(IapDetails {
             is_active: m.purchase_state == gp::PurchaseState::Purchased,
             is_sandbox: m.purchase_type == Some(gp::PurchaseType::Test),
@@ -279,11 +271,10 @@ impl<U: IapTypeSpecificDetails> IapDetails<U> {
             purchase_time: m.purchase_time_millis,
             region_iso3166_alpha_3: rust_iso3166::from_alpha2(&m.region_code)
                 .ok_or_else(|| {
-                    GooglePlayDeveloperApiInvalidResponse::with_debug(
-                        CXT,
-                        "Invalid region code.",
-                        m.region_code.clone(),
-                    )
+                    GooglePlayDeveloperApiInvalidResponse::new(&format!(
+                        "Invalid region code '{}'.",
+                        m.region_code.clone()
+                    ))
                 })?
                 .alpha3
                 .to_string(),
@@ -298,8 +289,7 @@ impl<U: IapTypeSpecificDetails> IapDetails<U> {
     fn from_google_subscription_purchase<T: TypedProductId<DetailsType = U>>(
         m: gs::SubscriptionPurchaseV2Model,
         p: Option<gi::InAppProductModel>,
-    ) -> Result<Self, GenericServerError> {
-        cxt!("IapDetails::from_google_subscription_purchase");
+    ) -> Result<Self, ServerError> {
         Ok(IapDetails {
             // NOTE: Certain states (ex. SubscriptionStateCanceled) may indicate
             // the subscription is no longer being renewed, but it may still be
@@ -321,17 +311,15 @@ impl<U: IapTypeSpecificDetails> IapDetails<U> {
             },
             purchase_time: m.start_time.ok_or_else(|| {
                 GooglePlayDeveloperApiInvalidResponse::new(
-                    CXT,
                     "Subscription did not have a start time.",
                 )
             })?,
             region_iso3166_alpha_3: rust_iso3166::from_alpha2(&m.region_code)
                 .ok_or_else(|| {
-                    GooglePlayDeveloperApiInvalidResponse::with_debug(
-                        CXT,
-                        "Invalid region code.",
-                        m.region_code.clone(),
-                    )
+                    GooglePlayDeveloperApiInvalidResponse::new(&format!(
+                        "Invalid region code '{}'.",
+                        m.region_code.clone()
+                    ))
                 })?
                 .alpha3
                 .to_string(),
@@ -348,21 +336,18 @@ impl PriceInfo {
     fn from_google_in_app_product_model(
         p: &gi::InAppProductModel,
         region_code: &str,
-    ) -> Result<Self, GenericServerError> {
-        cxt!("PriceInfo::from_google_in_app_product_model");
+    ) -> Result<Self, ServerError> {
         let details = p.prices.get(region_code).ok_or_else(|| {
-            GooglePlayDeveloperApiInvalidResponse::with_debug(
-                CXT,
-                "Region code not found in product prices.",
-                region_code.to_string(),
-            )
+            GooglePlayDeveloperApiInvalidResponse::new(&format!(
+                "Region code '{}' not found in product prices.",
+                region_code.to_string()
+            ))
         })?;
         Ok(Self {
             price_micros: details.price_micros.parse::<i64>().map_err(|e| {
                 GooglePlayDeveloperApiInvalidResponse::with_debug(
-                    CXT,
                     "Price micros could not be parsed.",
-                    e.to_string(),
+                    &e,
                 )
             })?,
             currency_iso_4217: details.currency.clone(),
@@ -375,19 +360,19 @@ impl TypedProductId for IapNonConsumableId {
 
     fn extract_details_from_apple_transaction(
         _m: &at::JwsTransactionDecodedPayloadModel,
-    ) -> Result<Self::DetailsType, GenericServerError> {
+    ) -> Result<Self::DetailsType, ServerError> {
         Ok(NonConsumableDetails {})
     }
 
     fn extract_details_from_google_product_purchase(
         _m: &gp::ProductPurchaseModel,
-    ) -> Result<Self::DetailsType, GenericServerError> {
+    ) -> Result<Self::DetailsType, ServerError> {
         Ok(NonConsumableDetails {})
     }
 
     fn extract_details_from_google_subscription_purchase(
         _m: &gs::SubscriptionPurchaseV2Model,
-    ) -> Result<Self::DetailsType, GenericServerError> {
+    ) -> Result<Self::DetailsType, ServerError> {
         unreachable!()
     }
 }
@@ -397,7 +382,7 @@ impl TypedProductId for IapConsumableId {
 
     fn extract_details_from_apple_transaction(
         m: &at::JwsTransactionDecodedPayloadModel,
-    ) -> Result<Self::DetailsType, GenericServerError> {
+    ) -> Result<Self::DetailsType, ServerError> {
         Ok(ConsumableDetails {
             is_consumed: Unknown,
             quantity: m.quantity.map(|q| q as i64).unwrap_or(1),
@@ -406,7 +391,7 @@ impl TypedProductId for IapConsumableId {
 
     fn extract_details_from_google_product_purchase(
         m: &gp::ProductPurchaseModel,
-    ) -> Result<Self::DetailsType, GenericServerError> {
+    ) -> Result<Self::DetailsType, ServerError> {
         Ok(ConsumableDetails {
             is_consumed: Known(m.consumption_state == gp::ConsumptionState::Consumed),
             quantity: m.quantity.map(|q| q as i64).unwrap_or(1),
@@ -415,7 +400,7 @@ impl TypedProductId for IapConsumableId {
 
     fn extract_details_from_google_subscription_purchase(
         _m: &gs::SubscriptionPurchaseV2Model,
-    ) -> Result<Self::DetailsType, GenericServerError> {
+    ) -> Result<Self::DetailsType, ServerError> {
         unreachable!()
     }
 }
@@ -425,12 +410,10 @@ impl TypedProductId for IapSubscriptionId {
 
     fn extract_details_from_apple_transaction(
         m: &at::JwsTransactionDecodedPayloadModel,
-    ) -> Result<Self::DetailsType, GenericServerError> {
-        cxt!("IapSubscriptionId::extract_details_from_apple_transaction");
+    ) -> Result<Self::DetailsType, ServerError> {
         Ok(SubscriptionDetails {
             expiration_time: m.expires_date.ok_or_else(|| {
                 AppStoreServerApiInvalidResponse::new(
-                    CXT,
                     "Subscription's transaction info did not contain expiration date.",
                 )
             })?,
@@ -439,14 +422,13 @@ impl TypedProductId for IapSubscriptionId {
 
     fn extract_details_from_google_product_purchase(
         _m: &gp::ProductPurchaseModel,
-    ) -> Result<Self::DetailsType, GenericServerError> {
+    ) -> Result<Self::DetailsType, ServerError> {
         unreachable!()
     }
 
     fn extract_details_from_google_subscription_purchase(
         m: &gs::SubscriptionPurchaseV2Model,
-    ) -> Result<Self::DetailsType, GenericServerError> {
-        cxt!("IapSubscriptionId::extract_details_from_google_subscription_purchase");
+    ) -> Result<Self::DetailsType, ServerError> {
         Ok(SubscriptionDetails {
             expiration_time: m
                 .line_items
@@ -454,7 +436,6 @@ impl TypedProductId for IapSubscriptionId {
                 .max_by_key(|li| li.expiry_time)
                 .ok_or_else(|| {
                     GooglePlayDeveloperApiInvalidResponse::new(
-                        CXT,
                         "Subscription did not have any line items.",
                     )
                 })?
@@ -467,14 +448,12 @@ impl NotificationDetails {
     fn from_apple_notification(
         notification: an::ResponseBodyV2DecodedPayloadModel,
         transaction_info: Option<at::JwsTransactionDecodedPayloadModel>,
-    ) -> Result<Self, GenericServerError> {
-        cxt!("NotificationDetails::from_apple_notification");
+    ) -> Result<Self, ServerError> {
         let expected_data_missing_err = || {
-            Err(AppStoreServerApiInvalidResponse::with_debug(
-                CXT,
-                "Notification did not contain expected data.",
-                format!("{:?}", notification.notification_type),
-            ))
+            Err(AppStoreServerApiInvalidResponse::new(&format!(
+                "Notification type {:?} did not contain expected data.",
+                notification.notification_type
+            )))
         };
         Ok(
             match (&notification.notification_type, &notification.subtype) {
@@ -640,8 +619,7 @@ impl NotificationDetails {
         notification: gn::SubscriptionNotification,
         application_id: String,
         google_play_developer_api_datasource: &T,
-    ) -> Result<Self, GenericServerError> {
-        cxt!("NotificationDetails::from_google_subscription_notification");
+    ) -> Result<Self, ServerError> {
         let api_data = google_play_developer_api_datasource
             .get_subscription_purchase_v2(&application_id, &notification.purchase_token)
             .await?;
@@ -651,7 +629,6 @@ impl NotificationDetails {
                 .last()
                 .ok_or_else(|| {
                     GooglePlayDeveloperApiInvalidResponse::new(
-                        CXT,
                         "Subscription did not have any line items.",
                     )
                 })?
@@ -774,8 +751,7 @@ impl NotificationDetails {
         notification: gn::VoidedPurchaseNotification,
         application_id: String,
         google_play_developer_api_datasource: &T,
-    ) -> Result<Self, GenericServerError> {
-        cxt!("NotificationDetails::from_google_voided_product_notification");
+    ) -> Result<Self, ServerError> {
         Ok(match notification.product_type {
             gn::VoidedPurchaseProductType::ProductTypeOneTime => {
                 // Unfortunately, we don't have access to the product ID here,
@@ -802,7 +778,6 @@ impl NotificationDetails {
                             .last()
                             .ok_or_else(|| {
                                 GooglePlayDeveloperApiInvalidResponse::new(
-                                    CXT,
                                     "Subscription did not have any line items.",
                                 )
                             })?

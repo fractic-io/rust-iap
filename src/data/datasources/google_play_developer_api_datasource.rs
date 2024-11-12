@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use fractic_server_error::{cxt, GenericServerError};
+use fractic_server_error::ServerError;
 use reqwest::header::AUTHORIZATION;
 use serde::de::DeserializeOwned;
 use yup_oauth2::{parse_service_account_key, ServiceAccountAuthenticator};
@@ -32,7 +32,7 @@ pub(crate) trait GooglePlayDeveloperApiDatasource: Send + Sync {
         package_name: &str,
         product_id: &str,
         token: &str,
-    ) -> Result<ProductPurchaseModel, GenericServerError>;
+    ) -> Result<ProductPurchaseModel, ServerError>;
 
     /// purchases.subscriptionsv2.get:
     /// https://developers.google.com/android-publisher/api-ref/rest/v3/purchases.subscriptionsv2/get
@@ -47,7 +47,7 @@ pub(crate) trait GooglePlayDeveloperApiDatasource: Send + Sync {
         &self,
         package_name: &str,
         token: &str,
-    ) -> Result<SubscriptionPurchaseV2Model, GenericServerError>;
+    ) -> Result<SubscriptionPurchaseV2Model, ServerError>;
 
     /// inappproducts.get:
     /// https://developers.google.com/android-publisher/api-ref/rest/v3/inappproducts/get
@@ -60,7 +60,7 @@ pub(crate) trait GooglePlayDeveloperApiDatasource: Send + Sync {
         &self,
         package_name: &str,
         sku: &str,
-    ) -> Result<InAppProductModel, GenericServerError>;
+    ) -> Result<InAppProductModel, ServerError>;
 }
 
 pub(crate) struct GooglePlayDeveloperApiDatasourceImpl {
@@ -75,52 +75,43 @@ impl GooglePlayDeveloperApiDatasource for GooglePlayDeveloperApiDatasourceImpl {
         package_name: &str,
         product_id: &str,
         token: &str,
-    ) -> Result<ProductPurchaseModel, GenericServerError> {
-        cxt!("GooglePlayDeveloperApiDatasourceImpl::get_product_purchase");
+    ) -> Result<ProductPurchaseModel, ServerError> {
         let url = format!("https://androidpublisher.googleapis.com/androidpublisher/v3/applications/{package_name}/purchases/products/{product_id}/tokens/{token}");
-        self.callout(CXT, &url, "purchases.products.get").await
+        self.callout(&url, "purchases.products.get").await
     }
 
     async fn get_subscription_purchase_v2(
         &self,
         package_name: &str,
         token: &str,
-    ) -> Result<SubscriptionPurchaseV2Model, GenericServerError> {
-        cxt!("GooglePlayDeveloperApiDatasourceImpl::get_subscription_purchase_v2");
+    ) -> Result<SubscriptionPurchaseV2Model, ServerError> {
         let url = format!("https://androidpublisher.googleapis.com/androidpublisher/v3/applications/{package_name}/purchases/subscriptionsv2/tokens/{token}");
-        self.callout(CXT, &url, "purchases.subscriptionsv2.get")
-            .await
+        self.callout(&url, "purchases.subscriptionsv2.get").await
     }
 
     async fn get_in_app_product(
         &self,
         package_name: &str,
         sku: &str,
-    ) -> Result<InAppProductModel, GenericServerError> {
-        cxt!("GooglePlayDeveloperApiDatasourceImpl::get_in_app_product");
+    ) -> Result<InAppProductModel, ServerError> {
         let url = format!("https://androidpublisher.googleapis.com/androidpublisher/v3/applications/{package_name}/inappproducts/{sku}");
-        self.callout(CXT, &url, "inappproducts.get").await
+        self.callout(&url, "inappproducts.get").await
     }
 }
 
 impl GooglePlayDeveloperApiDatasourceImpl {
-    pub(crate) async fn new(
-        api_key: &str,
-        expected_aud: String,
-    ) -> Result<Self, GenericServerError> {
+    pub(crate) async fn new(api_key: &str, expected_aud: String) -> Result<Self, ServerError> {
         Ok(Self {
             access_token: Self::build_access_token(api_key).await?,
             expected_aud,
         })
     }
 
-    async fn build_access_token(api_key: &str) -> Result<String, GenericServerError> {
-        cxt!("GooglePlayDeveloperApiDatasourceImpl::build_access_token");
+    async fn build_access_token(api_key: &str) -> Result<String, ServerError> {
         let key = parse_service_account_key(api_key).map_err(|e| {
             GooglePlayDeveloperApiKeyInvalid::with_debug(
-                CXT,
                 "Google Play API key could not be parsed.",
-                format!("{:?}", e),
+                &e,
             )
         })?;
         let authenticator = ServiceAccountAuthenticator::builder(key)
@@ -128,9 +119,8 @@ impl GooglePlayDeveloperApiDatasourceImpl {
             .await
             .map_err(|e| {
                 GooglePlayDeveloperApiKeyInvalid::with_debug(
-                    CXT,
                     "Google Play API service account authenticator could not be built.",
-                    format!("{:?}", e),
+                    &e,
                 )
             })?;
 
@@ -140,14 +130,12 @@ impl GooglePlayDeveloperApiDatasourceImpl {
             .await
             .map_err(|e| {
                 GooglePlayDeveloperApiKeyInvalid::with_debug(
-                    CXT,
                     "Google Play API service account token could not be built.",
-                    format!("{:?}", e),
+                    &e,
                 )
             })?
             .token()
             .ok_or(GooglePlayDeveloperApiKeyInvalid::new(
-                CXT,
                 "Google Play API service account token is empty.",
             ))?
             .to_string())
@@ -155,10 +143,9 @@ impl GooglePlayDeveloperApiDatasourceImpl {
 
     async fn callout<T: DeserializeOwned>(
         &self,
-        cxt: &'static str,
         url: &str,
         function_name: &str,
-    ) -> Result<T, GenericServerError> {
+    ) -> Result<T, ServerError> {
         let response = reqwest::Client::new()
             .get(url)
             .header(AUTHORIZATION, format!("Bearer {}", self.access_token))
@@ -166,22 +153,20 @@ impl GooglePlayDeveloperApiDatasourceImpl {
             .await
             .map_err(|e| {
                 GooglePlayDeveloperApiError::with_debug(
-                    cxt,
+                    function_name,
                     "Callout failed to send.",
-                    format!("{}; {:?}", function_name, e),
+                    &e,
                 )
             })?;
 
         if !response.status().is_success() {
             return Err(GooglePlayDeveloperApiError::with_debug(
-                cxt,
-                "Callout returned with non-200 status code.",
-                format!(
-                    "{}; {}; {}",
-                    function_name,
+                function_name,
+                &format!(
+                    "Callout returned with {} status code.",
                     response.status().to_string(),
-                    response.text().await.unwrap_or_default()
                 ),
+                &response.text().await.unwrap_or_default(),
             ));
         }
 
@@ -191,7 +176,7 @@ impl GooglePlayDeveloperApiDatasourceImpl {
                 .get(AUTHORIZATION)
                 .and_then(|a| a.to_str().ok())
                 .ok_or(GooglePlayDeveloperApiError::new(
-                    cxt,
+                    function_name,
                     "Callout response is missing Authorization header.",
                 ))?,
             &self.expected_aud,
@@ -200,9 +185,9 @@ impl GooglePlayDeveloperApiDatasourceImpl {
 
         response.json().await.map_err(|e| {
             GooglePlayDeveloperApiError::with_debug(
-                cxt,
+                function_name,
                 "Failed to parse callout response.",
-                format!("{}; {:?}", function_name, e),
+                &e,
             )
         })
     }

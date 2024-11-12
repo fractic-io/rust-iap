@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use fractic_server_error::{cxt, GenericServerError};
+use fractic_server_error::ServerError;
 
 use crate::{
     data::{
@@ -34,7 +34,7 @@ pub(crate) trait AppStoreServerNotificationDatasource: Send + Sync {
             Option<JwsTransactionDecodedPayloadModel>,
             Option<JwsRenewalInfoDecodedPayloadModel>,
         ),
-        GenericServerError,
+        ServerError,
     >;
 }
 
@@ -53,30 +53,24 @@ impl AppStoreServerNotificationDatasource for AppStoreServerNotificationDatasour
             Option<JwsTransactionDecodedPayloadModel>,
             Option<JwsRenewalInfoDecodedPayloadModel>,
         ),
-        GenericServerError,
+        ServerError,
     > {
-        cxt!("AppStoreServerNotificationDatasourceImpl::parse_notification");
-        let wrapper: ResponseBodyV2Model = serde_json::from_str(body).map_err(|e| {
-            AppStoreServerNotificationParseError::with_debug(
-                CXT,
-                "Failed to parse notification",
-                format!("{:?}", e),
-            )
-        })?;
+        let wrapper: ResponseBodyV2Model = serde_json::from_str(body)
+            .map_err(|e| AppStoreServerNotificationParseError::with_debug(&e))?;
         validate_apple_signature(&wrapper.signed_payload, &self.expected_aud).await?;
         let decoded_payload: ResponseBodyV2DecodedPayloadModel =
-            decode_jws_payload(CXT, &wrapper.signed_payload)?;
+            decode_jws_payload(&wrapper.signed_payload)?;
         let decoded_transaction_info: Option<JwsTransactionDecodedPayloadModel> = decoded_payload
             .data
             .as_ref()
-            .map(|data| decode_jws_payload(CXT, &data.signed_transaction_info))
+            .map(|data| decode_jws_payload(&data.signed_transaction_info))
             .transpose()?;
         let decoded_renewal_info: Option<JwsRenewalInfoDecodedPayloadModel> = decoded_payload
             .data
             .as_ref()
             .map(|data| data.signed_renewal_info.as_ref())
             .flatten()
-            .map(|renewal_info| decode_jws_payload(CXT, &renewal_info))
+            .map(|renewal_info| decode_jws_payload(&renewal_info))
             .transpose()?;
         Ok((
             decoded_payload,

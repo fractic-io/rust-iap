@@ -1,5 +1,5 @@
 use fractic_env_config::SecretValues;
-use fractic_server_error::GenericServerError;
+use fractic_server_error::ServerError;
 
 use crate::{
     data::{
@@ -45,7 +45,7 @@ impl IapUtil {
         product_id: T,
         purchase_id: IapPurchaseId,
         include_price_info: bool,
-    ) -> Result<IapDetails<T::DetailsType>, GenericServerError> {
+    ) -> Result<IapDetails<T::DetailsType>, ServerError> {
         self.iap_repository
             .verify_and_get_details(product_id, purchase_id, include_price_info)
             .await
@@ -59,7 +59,7 @@ impl IapUtil {
     pub async fn parse_apple_notification(
         &self,
         body: &str,
-    ) -> Result<IapUpdateNotification, GenericServerError> {
+    ) -> Result<IapUpdateNotification, ServerError> {
         self.iap_repository.parse_apple_notification(body).await
     }
 
@@ -72,7 +72,7 @@ impl IapUtil {
         &self,
         authorization_header: &str,
         body: &str,
-    ) -> Result<IapUpdateNotification, GenericServerError> {
+    ) -> Result<IapUpdateNotification, ServerError> {
         self.iap_repository
             .parse_google_notification(authorization_header, body)
             .await
@@ -84,7 +84,7 @@ impl IapUtil {
         secrets: SecretValues<IapSecretsConfig>,
         application_id: impl Into<String>,
         aud_claim: impl Into<String>,
-    ) -> Result<Self, GenericServerError> {
+    ) -> Result<Self, ServerError> {
         Ok(Self {
             iap_repository: IapRepositoryImpl::new(
                 application_id,
@@ -105,7 +105,7 @@ impl IapUtil {
         apple_key_id: &str,
         apple_issuer_id: &str,
         google_api_key: &str,
-    ) -> Result<Self, GenericServerError> {
+    ) -> Result<Self, ServerError> {
         Ok(Self {
             iap_repository: IapRepositoryImpl::new(
                 application_id,

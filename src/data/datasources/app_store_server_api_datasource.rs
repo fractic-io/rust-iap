@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use fractic_server_error::{cxt, GenericServerError};
+use fractic_server_error::ServerError;
 use reqwest::header::AUTHORIZATION;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
@@ -25,7 +25,7 @@ pub(crate) trait AppStoreServerApiDatasource: Send + Sync {
     async fn get_transaction_info(
         &self,
         transaction_id: &str,
-    ) -> Result<JwsTransactionDecodedPayloadModel, GenericServerError>;
+    ) -> Result<JwsTransactionDecodedPayloadModel, ServerError>;
 }
 
 pub(crate) struct AppStoreServerApiDatasourceImpl {
@@ -38,8 +38,7 @@ impl AppStoreServerApiDatasource for AppStoreServerApiDatasourceImpl {
     async fn get_transaction_info(
         &self,
         transaction_id: &str,
-    ) -> Result<JwsTransactionDecodedPayloadModel, GenericServerError> {
-        cxt!("AppStoreServerApiDatasourceImpl::get_transaction_info");
+    ) -> Result<JwsTransactionDecodedPayloadModel, ServerError> {
         let production_url = format!(
             "https://api.storekit.itunes.apple.com/inApps/v1/transactions/{transaction_id}"
         );
@@ -47,14 +46,14 @@ impl AppStoreServerApiDatasource for AppStoreServerApiDatasourceImpl {
             "https://api.storekit-sandbox.itunes.apple.com/inApps/v1/transactions/{transaction_id}"
         );
         let response_wrapper: TransactionInfoResponseModel = self
-            .callout_with_sandbox_fallback(CXT, &production_url, &sandbox_url, "GetTransactionInfo")
+            .callout_with_sandbox_fallback(&production_url, &sandbox_url, "GetTransactionInfo")
             .await?;
         validate_apple_signature(
             &response_wrapper.signed_transaction_info,
             &self.expected_aud,
         )
         .await?;
-        decode_jws_payload(CXT, &response_wrapper.signed_transaction_info)
+        decode_jws_payload(&response_wrapper.signed_transaction_info)
     }
 }
 
@@ -65,7 +64,7 @@ impl AppStoreServerApiDatasourceImpl {
         issuer_id: &str,
         bundle_id: &str,
         expected_aud: String,
-    ) -> Result<Self, GenericServerError> {
+    ) -> Result<Self, ServerError> {
         Ok(Self {
             jwt_token: Self::build_jwt_token(api_key, key_id, issuer_id, bundle_id).await?,
             expected_aud,
@@ -77,9 +76,7 @@ impl AppStoreServerApiDatasourceImpl {
         key_id: &str,
         issuer_id: &str,
         bundle_id: &str,
-    ) -> Result<String, GenericServerError> {
-        cxt!("AppStoreServerApiDatasourceImpl::build_jwt_token");
-
+    ) -> Result<String, ServerError> {
         // Build header.
         let mut header = jsonwebtoken::Header::new(jsonwebtoken::Algorithm::ES256);
         header.kid = Some(key_id.to_owned());
@@ -107,29 +104,22 @@ impl AppStoreServerApiDatasourceImpl {
             &claims,
             &jsonwebtoken::EncodingKey::from_secret(api_key.as_ref()),
         )
-        .map_err(|e| {
-            AppStoreServerApiKeyInvalid::with_debug(
-                CXT,
-                "Failed to build JWT token.",
-                format!("{:?}", e),
-            )
-        })
+        .map_err(|e| AppStoreServerApiKeyInvalid::with_debug("Failed to build JWT token.", &e))
     }
 
     async fn callout_with_sandbox_fallback<T: DeserializeOwned>(
         &self,
-        cxt: &'static str,
         production_url: &str,
         sandbox_url: &str,
         function_name: &str,
-    ) -> Result<T, GenericServerError> {
+    ) -> Result<T, ServerError> {
         // As per Apple's documentation, try production endpoint first. If it
         // fails, try checking the sandbox.
         //
         // If both fail, we will return the error from the production callout.
-        match self.callout(cxt, production_url, function_name).await {
+        match self.callout(production_url, function_name).await {
             Ok(production_response) => Ok(production_response),
-            Err(production_error) => match self.callout(cxt, sandbox_url, function_name).await {
+            Err(production_error) => match self.callout(sandbox_url, function_name).await {
                 Ok(sandbox_response) => Ok(sandbox_response),
                 Err(_sandbox_error) => Err(production_error),
             },
@@ -138,41 +128,34 @@ impl AppStoreServerApiDatasourceImpl {
 
     async fn callout<T: DeserializeOwned>(
         &self,
-        cxt: &'static str,
         url: &str,
         function_name: &str,
-    ) -> Result<T, GenericServerError> {
+    ) -> Result<T, ServerError> {
         let response = reqwest::Client::new()
             .get(url)
             .header(AUTHORIZATION, format!("Bearer {}", self.jwt_token))
             .send()
             .await
             .map_err(|e| {
-                AppStoreServerApiError::with_debug(
-                    cxt,
-                    "Callout failed to send.",
-                    format!("{}; {:?}", function_name, e),
-                )
+                AppStoreServerApiError::with_debug(function_name, "Callout failed to send.", &e)
             })?;
 
         if !response.status().is_success() {
             return Err(AppStoreServerApiError::with_debug(
-                cxt,
-                "Callout returned with non-200 status code.",
-                format!(
-                    "{}; {}; {}",
-                    function_name,
+                function_name,
+                &format!(
+                    "Callout returned with {} status code.",
                     response.status().to_string(),
-                    response.text().await.unwrap_or_default()
                 ),
+                &response.text().await.unwrap_or_default(),
             ));
         }
 
         response.json().await.map_err(|e| {
             AppStoreServerApiError::with_debug(
-                cxt,
+                function_name,
                 "Failed to parse callout response.",
-                format!("{}; {:?}", function_name, e),
+                &e,
             )
         })
     }

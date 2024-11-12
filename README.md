@@ -16,7 +16,7 @@ use fractic_env_config::{
     EnvConfigEnum, load_env, load_secrets,
     SecretsConfigEnum, SECRETS_ID, SECRETS_REGION,
 };
-use fractic_server_error::GenericServerError;
+use fractic_server_error::ServerError;
 use fractic_iap::{
     domain::entities::{
         iap_details::{IapDetails, NonConsumableDetails, SubscriptionDetails},
@@ -58,7 +58,7 @@ define_secrets_config!(
     AppleIssuerId => APPLE_ISSUER_ID,
 );
 
-async fn run() -> Result<(), GenericServerError> {
+async fn run() -> Result<(), ServerError> {
     // Load the env / secrets.
     let env = load_env::<EnvConfig>()?;
     let secrets = load_secrets::<SecretsConfig>(env.clone_into()?).await?;
@@ -126,10 +126,10 @@ async fn run() -> Result<(), GenericServerError> {
 To inline the API keys directly:
 
 ```rust
-use fractic_server_error::GenericServerError;
+use fractic_server_error::ServerError;
 use fractic_iap::util::IapUtil;
 
-async fn run() -> Result<(), GenericServerError> {
+async fn run() -> Result<(), ServerError> {
     let iap_util = IapUtil::from_values(
         "com.example.appid",
         "<expected_aud_claim>",
