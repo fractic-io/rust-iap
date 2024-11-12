@@ -39,16 +39,13 @@ impl GoogleCloudRtdnNotificationDatasource for GoogleCloudRtdnNotificationDataso
     ) -> Result<(PubSubModel, DeveloperNotificationModel), ServerError> {
         validate_google_signature(authorization_header, &self.expected_aud).await?;
         let wrapper: PubSubModel = serde_json::from_str(body).map_err(|e| {
-            GoogleCloudRtdnNotificationParseError::with_debug(
-                "Failed to parse Pub/Sub wrapper.",
-                &e,
-            )
+            GoogleCloudRtdnNotificationParseError::with_debug("failed to parse Pub/Sub wrapper", &e)
         })?;
         let decoded_message = BASE64_STANDARD
             .decode(wrapper.message.data.clone())
             .map_err(|e| {
                 GoogleCloudRtdnNotificationParseError::with_debug(
-                    "Failed to base64-decode notification struct.",
+                    "failed to base64-decode notification struct",
                     &e,
                 )
             })?;
@@ -56,7 +53,7 @@ impl GoogleCloudRtdnNotificationDatasource for GoogleCloudRtdnNotificationDataso
             wrapper,
             serde_json::from_slice(&decoded_message).map_err(|e| {
                 GoogleCloudRtdnNotificationParseError::with_debug(
-                    "Failed to parse notification struct.",
+                    "failed to parse notification struct",
                     &e,
                 )
             })?,

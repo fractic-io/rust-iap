@@ -17,17 +17,17 @@ pub(crate) fn decode_jws_payload<T: DeserializeOwned>(data: &str) -> Result<T, S
         Ok(Jws::General(jws)) => jws,
         Err(parsing_error) => {
             return Err(InvalidJws::with_debug(
-                "Failed to parse JWS struct.",
+                "failed to parse JWS struct",
                 &parsing_error,
             ))
         }
-        _ => return Err(InvalidJws::new("Invalid JWS type.")),
+        _ => return Err(InvalidJws::new("invalid JWS type")),
     };
     let payload = jws
         .payload
-        .ok_or(InvalidJws::new("JWS payload is missing."))?;
+        .ok_or(InvalidJws::new("JWS payload is missing"))?;
     serde_json::from_slice(&payload)
-        .map_err(|e| InvalidJws::with_debug("Failed to parse JWS payload.", &e))
+        .map_err(|e| InvalidJws::with_debug("failed to parse JWS payload", &e))
 }
 
 /// Validates that the jws is signed by Apple.

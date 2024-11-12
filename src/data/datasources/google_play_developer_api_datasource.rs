@@ -110,7 +110,7 @@ impl GooglePlayDeveloperApiDatasourceImpl {
     async fn build_access_token(api_key: &str) -> Result<String, ServerError> {
         let key = parse_service_account_key(api_key).map_err(|e| {
             GooglePlayDeveloperApiKeyInvalid::with_debug(
-                "Google Play API key could not be parsed.",
+                "Google Play API key could not be parsed",
                 &e,
             )
         })?;
@@ -119,7 +119,7 @@ impl GooglePlayDeveloperApiDatasourceImpl {
             .await
             .map_err(|e| {
                 GooglePlayDeveloperApiKeyInvalid::with_debug(
-                    "Google Play API service account authenticator could not be built.",
+                    "Google Play API service account authenticator could not be built",
                     &e,
                 )
             })?;
@@ -130,13 +130,13 @@ impl GooglePlayDeveloperApiDatasourceImpl {
             .await
             .map_err(|e| {
                 GooglePlayDeveloperApiKeyInvalid::with_debug(
-                    "Google Play API service account token could not be built.",
+                    "Google Play API service account token could not be built",
                     &e,
                 )
             })?
             .token()
             .ok_or(GooglePlayDeveloperApiKeyInvalid::new(
-                "Google Play API service account token is empty.",
+                "Google Play API service account token is empty",
             ))?
             .to_string())
     }
@@ -152,18 +152,14 @@ impl GooglePlayDeveloperApiDatasourceImpl {
             .send()
             .await
             .map_err(|e| {
-                GooglePlayDeveloperApiError::with_debug(
-                    function_name,
-                    "Callout failed to send.",
-                    &e,
-                )
+                GooglePlayDeveloperApiError::with_debug(function_name, "callout failed to send", &e)
             })?;
 
         if !response.status().is_success() {
             return Err(GooglePlayDeveloperApiError::with_debug(
                 function_name,
                 &format!(
-                    "Callout returned with {} status code.",
+                    "callout returned with {} status code",
                     response.status().to_string(),
                 ),
                 &response.text().await.unwrap_or_default(),
@@ -177,7 +173,7 @@ impl GooglePlayDeveloperApiDatasourceImpl {
                 .and_then(|a| a.to_str().ok())
                 .ok_or(GooglePlayDeveloperApiError::new(
                     function_name,
-                    "Callout response is missing Authorization header.",
+                    "callout response is missing Authorization header",
                 ))?,
             &self.expected_aud,
         )
@@ -186,7 +182,7 @@ impl GooglePlayDeveloperApiDatasourceImpl {
         response.json().await.map_err(|e| {
             GooglePlayDeveloperApiError::with_debug(
                 function_name,
-                "Failed to parse callout response.",
+                "failed to parse callout response",
                 &e,
             )
         })

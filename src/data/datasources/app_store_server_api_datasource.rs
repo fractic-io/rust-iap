@@ -104,7 +104,7 @@ impl AppStoreServerApiDatasourceImpl {
             &claims,
             &jsonwebtoken::EncodingKey::from_secret(api_key.as_ref()),
         )
-        .map_err(|e| AppStoreServerApiKeyInvalid::with_debug("Failed to build JWT token.", &e))
+        .map_err(|e| AppStoreServerApiKeyInvalid::with_debug("failed to build JWT token", &e))
     }
 
     async fn callout_with_sandbox_fallback<T: DeserializeOwned>(
@@ -137,14 +137,14 @@ impl AppStoreServerApiDatasourceImpl {
             .send()
             .await
             .map_err(|e| {
-                AppStoreServerApiError::with_debug(function_name, "Callout failed to send.", &e)
+                AppStoreServerApiError::with_debug(function_name, "callout failed to send", &e)
             })?;
 
         if !response.status().is_success() {
             return Err(AppStoreServerApiError::with_debug(
                 function_name,
                 &format!(
-                    "Callout returned with {} status code.",
+                    "callout returned with {} status code",
                     response.status().to_string(),
                 ),
                 &response.text().await.unwrap_or_default(),
@@ -154,7 +154,7 @@ impl AppStoreServerApiDatasourceImpl {
         response.json().await.map_err(|e| {
             AppStoreServerApiError::with_debug(
                 function_name,
-                "Failed to parse callout response.",
+                "failed to parse callout response",
                 &e,
             )
         })

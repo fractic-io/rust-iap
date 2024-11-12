@@ -166,7 +166,7 @@ impl<
             NotificationDetails::Other
         } else {
             return Err(GoogleCloudRtdnNotificationParseError::new(
-                "Notification did not have one of the recognized types (subscription, one-time purchase, voided purchase, or test).",
+                "notification did not have one of the recognized types (subscription, one-time purchase, voided purchase, or test)",
             ));
         };
         Ok(IapUpdateNotification {
@@ -242,12 +242,12 @@ impl<U: IapTypeSpecificDetails> IapDetails<U> {
                 Some(PriceInfo {
                     price_micros: m.price.ok_or_else(|| {
                         AppStoreServerApiInvalidResponse::new(
-                            "Transaction did not contain price info.",
+                            "transaction did not contain price info",
                         )
                     })? * 1000,
                     currency_iso_4217: m.currency.clone().ok_or_else(|| {
                         AppStoreServerApiInvalidResponse::new(
-                            "Transaction did not contain currency info.",
+                            "transaction did not contain currency info",
                         )
                     })?, // Already in ISO 4217 format.
                 })
@@ -272,7 +272,7 @@ impl<U: IapTypeSpecificDetails> IapDetails<U> {
             region_iso3166_alpha_3: rust_iso3166::from_alpha2(&m.region_code)
                 .ok_or_else(|| {
                     GooglePlayDeveloperApiInvalidResponse::new(&format!(
-                        "Invalid region code '{}'.",
+                        "invalid region code '{}'",
                         m.region_code.clone()
                     ))
                 })?
@@ -310,14 +310,12 @@ impl<U: IapTypeSpecificDetails> IapDetails<U> {
                 | gs::AcknowledgementState::AcknowledgementStateUnspecified => Unknown,
             },
             purchase_time: m.start_time.ok_or_else(|| {
-                GooglePlayDeveloperApiInvalidResponse::new(
-                    "Subscription did not have a start time.",
-                )
+                GooglePlayDeveloperApiInvalidResponse::new("subscription did not have a start time")
             })?,
             region_iso3166_alpha_3: rust_iso3166::from_alpha2(&m.region_code)
                 .ok_or_else(|| {
                     GooglePlayDeveloperApiInvalidResponse::new(&format!(
-                        "Invalid region code '{}'.",
+                        "invalid region code '{}'",
                         m.region_code.clone()
                     ))
                 })?
@@ -339,14 +337,14 @@ impl PriceInfo {
     ) -> Result<Self, ServerError> {
         let details = p.prices.get(region_code).ok_or_else(|| {
             GooglePlayDeveloperApiInvalidResponse::new(&format!(
-                "Region code '{}' not found in product prices.",
+                "region code '{}' not found in product prices",
                 region_code.to_string()
             ))
         })?;
         Ok(Self {
             price_micros: details.price_micros.parse::<i64>().map_err(|e| {
                 GooglePlayDeveloperApiInvalidResponse::with_debug(
-                    "Price micros could not be parsed.",
+                    "price micros could not be parsed",
                     &e,
                 )
             })?,
@@ -414,7 +412,7 @@ impl TypedProductId for IapSubscriptionId {
         Ok(SubscriptionDetails {
             expiration_time: m.expires_date.ok_or_else(|| {
                 AppStoreServerApiInvalidResponse::new(
-                    "Subscription's transaction info did not contain expiration date.",
+                    "subscription's transaction info did not contain expiration date",
                 )
             })?,
         })
@@ -436,7 +434,7 @@ impl TypedProductId for IapSubscriptionId {
                 .max_by_key(|li| li.expiry_time)
                 .ok_or_else(|| {
                     GooglePlayDeveloperApiInvalidResponse::new(
-                        "Subscription did not have any line items.",
+                        "subscription did not have any line items",
                     )
                 })?
                 .expiry_time,
@@ -451,7 +449,7 @@ impl NotificationDetails {
     ) -> Result<Self, ServerError> {
         let expected_data_missing_err = || {
             Err(AppStoreServerApiInvalidResponse::new(&format!(
-                "Notification type {:?} did not contain expected data.",
+                "notification type {:?} did not contain expected data",
                 notification.notification_type
             )))
         };
@@ -629,7 +627,7 @@ impl NotificationDetails {
                 .last()
                 .ok_or_else(|| {
                     GooglePlayDeveloperApiInvalidResponse::new(
-                        "Subscription did not have any line items.",
+                        "subscription did not have any line items",
                     )
                 })?
                 .product_id
@@ -778,7 +776,7 @@ impl NotificationDetails {
                             .last()
                             .ok_or_else(|| {
                                 GooglePlayDeveloperApiInvalidResponse::new(
-                                    "Subscription did not have any line items.",
+                                    "subscription did not have any line items",
                                 )
                             })?
                             .product_id
