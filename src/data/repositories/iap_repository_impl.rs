@@ -34,7 +34,8 @@ use crate::{
                 NonConsumableDetails, PriceInfo, SubscriptionDetails,
             },
             iap_product_id::{
-                private::_ProductIdType, IapConsumableId, IapNonConsumableId, IapSubscriptionId,
+                private::{IapProductId, _ProductIdType},
+                IapConsumableId, IapNonConsumableId, IapSubscriptionId,
             },
             iap_purchase_id::IapPurchaseId,
             iap_update_notification::{
@@ -118,6 +119,21 @@ impl<
             return Err(NotActive::new());
         }
         Ok(iap_details)
+    }
+
+    async fn consume(
+        &self,
+        product_id: IapConsumableId,
+        purchase_id: IapPurchaseId,
+    ) -> Result<(), ServerError> {
+        match purchase_id {
+            IapPurchaseId::GooglePlayPurchaseToken(token) => {
+                self.google_play_developer_api_datasource
+                    .consume_product_purchase(&self.application_id, product_id.sku(), &token)
+                    .await
+            }
+            _ => Ok(()),
+        }
     }
 
     async fn parse_apple_notification(

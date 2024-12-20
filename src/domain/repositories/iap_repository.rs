@@ -11,7 +11,7 @@ use crate::{
     },
     domain::entities::{
         iap_details::{IapDetails, IapTypeSpecificDetails},
-        iap_product_id::private::IapProductId,
+        iap_product_id::{private::IapProductId, IapConsumableId},
         iap_purchase_id::IapPurchaseId,
         iap_update_notification::IapUpdateNotification,
     },
@@ -41,6 +41,12 @@ pub trait IapRepository: Send + Sync {
         purchase_id: IapPurchaseId,
         include_price_info: bool,
     ) -> Result<IapDetails<T::DetailsType>, ServerError>;
+
+    async fn consume(
+        &self,
+        product_id: IapConsumableId,
+        purchase_id: IapPurchaseId,
+    ) -> Result<(), ServerError>;
 
     async fn parse_apple_notification(
         &self,

@@ -13,8 +13,8 @@ use crate::{
     },
     domain::{
         entities::{
-            iap_details::IapDetails, iap_purchase_id::IapPurchaseId,
-            iap_update_notification::IapUpdateNotification,
+            iap_details::IapDetails, iap_product_id::IapConsumableId,
+            iap_purchase_id::IapPurchaseId, iap_update_notification::IapUpdateNotification,
         },
         repositories::iap_repository::{IapRepository, TypedProductId},
     },
@@ -49,6 +49,19 @@ impl IapUtil {
         self.iap_repository
             .verify_and_get_details(product_id, purchase_id, include_price_info)
             .await
+    }
+
+    /// Mark a consumable product as consumed.
+    ///
+    /// Currently, this only has an effect on Google Play purchases. Apple
+    /// already assumes consumable products are consumed upon purchase, and
+    /// there is no API endpoint to consume them manually.
+    pub async fn consume(
+        &self,
+        product_id: IapConsumableId,
+        purchase_id: IapPurchaseId,
+    ) -> Result<(), ServerError> {
+        self.iap_repository.consume(product_id, purchase_id).await
     }
 
     /// Verify the notification authenticity (signed by Apple), and parse body
