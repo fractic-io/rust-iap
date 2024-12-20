@@ -1,8 +1,10 @@
 #![allow(dead_code)]
 
-use chrono::{serde::ts_milliseconds, DateTime, Utc};
+use chrono::{DateTime, Utc};
 use serde::Deserialize;
 use serde_repr::Deserialize_repr;
+use serde_with::formats::Flexible;
+use serde_with::TimestampMilliSeconds;
 
 /// Data structure for Google Play Real-time Developer Notifications (RTDN).
 ///
@@ -10,6 +12,7 @@ use serde_repr::Deserialize_repr;
 ///
 /// Whether fields are nullable is not documented explicitly in the API
 /// reference, so reasonable assumptions are made.
+#[serde_with::serde_as]
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct DeveloperNotificationModel {
@@ -20,7 +23,7 @@ pub(crate) struct DeveloperNotificationModel {
     /// (for example, `com.some.thing`).
     pub(crate) package_name: String,
     /// The timestamp when the event occurred, in milliseconds since the Epoch.
-    #[serde(with = "ts_milliseconds")]
+    #[serde_as(as = "TimestampMilliSeconds<String, Flexible>")]
     pub(crate) event_time_millis: DateTime<Utc>,
     /// If this field is present, then this notification is related to a
     /// subscription, and this field contains additional information related to

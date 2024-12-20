@@ -1,9 +1,10 @@
 #![allow(dead_code)]
 
-use chrono::serde::ts_milliseconds;
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
 use serde_repr::Deserialize_repr;
+use serde_with::formats::Flexible;
+use serde_with::TimestampMilliSeconds;
 
 /// Data structure returned by the Google Play Developer API when querying for a
 /// product purchase.
@@ -12,6 +13,7 @@ use serde_repr::Deserialize_repr;
 ///
 /// Whether fields are nullable is not documented explicitly in the API
 /// reference, so reasonable assumptions are made.
+#[serde_with::serde_as]
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ProductPurchaseModel {
@@ -20,7 +22,7 @@ pub struct ProductPurchaseModel {
     pub(crate) kind: Option<String>,
     /// The time the product was purchased, in milliseconds since the epoch (Jan
     /// 1, 1970).
-    #[serde(with = "ts_milliseconds")]
+    #[serde_as(as = "TimestampMilliSeconds<String, Flexible>")]
     pub(crate) purchase_time_millis: DateTime<Utc>,
     /// The purchase state of the order.
     pub(crate) purchase_state: PurchaseState,
