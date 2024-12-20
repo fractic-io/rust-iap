@@ -88,21 +88,21 @@ impl<
                 IapDetails::from_apple_transaction::<T>(m, include_price_info)?
             }
             IapPurchaseId::GooglePlayPurchaseToken(token) => {
-                let p = if include_price_info {
-                    Some(
-                        self.google_play_developer_api_datasource
-                            .get_in_app_product(&self.application_id, product_id.sku())
-                            .await?,
-                    )
-                } else {
-                    None
-                };
                 match T::product_type() {
                     _ProductIdType::Consumable | _ProductIdType::NonConsumable => {
                         let m = self
                             .google_play_developer_api_datasource
                             .get_product_purchase(&self.application_id, product_id.sku(), &token)
                             .await?;
+                        let p = if include_price_info {
+                            Some(
+                                self.google_play_developer_api_datasource
+                                    .get_in_app_product(&self.application_id, product_id.sku())
+                                    .await?,
+                            )
+                        } else {
+                            None
+                        };
                         IapDetails::from_google_product_purchase::<T>(m, p)?
                     }
                     _ProductIdType::Subscription => {
@@ -110,6 +110,13 @@ impl<
                             .google_play_developer_api_datasource
                             .get_subscription_purchase_v2(&self.application_id, &token)
                             .await?;
+                        // Price info not available for subscriptions.
+                        //
+                        // This would technically be possible with the
+                        // monetization.subscriptions API, but would be quite
+                        // complex as it requires determining which base plan is
+                        // purchased.
+                        let p = None;
                         IapDetails::from_google_subscription_purchase::<T>(m, p)?
                     }
                 }

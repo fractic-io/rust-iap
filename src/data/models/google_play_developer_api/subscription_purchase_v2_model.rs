@@ -293,6 +293,7 @@ pub(crate) struct SubscriptionPurchaseLineItem {
 pub(crate) struct AutoRenewingPlan {
     /// If the subscription is currently set to auto-renew, e.g. the user has
     /// not canceled the subscription
+    #[serde(default)]
     pub(crate) auto_renew_enabled: bool,
     /// The information of the last price change for the item since subscription
     /// signup.
