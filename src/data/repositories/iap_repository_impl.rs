@@ -176,9 +176,9 @@ impl<
         })
     }
 
-    async fn request_apple_test_notification(&self) -> Result<(), ServerError> {
+    async fn request_apple_test_notification(&self, sandbox: bool) -> Result<(), ServerError> {
         self.app_store_server_api_datasource
-            .request_test_notification()
+            .request_test_notification(sandbox)
             .await
     }
 }

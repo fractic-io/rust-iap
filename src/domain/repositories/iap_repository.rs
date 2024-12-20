@@ -53,5 +53,5 @@ pub trait IapRepository: Send + Sync {
         body: &str,
     ) -> Result<IapUpdateNotification, ServerError>;
 
-    async fn request_apple_test_notification(&self) -> Result<(), ServerError>;
+    async fn request_apple_test_notification(&self, sandbox: bool) -> Result<(), ServerError>;
 }

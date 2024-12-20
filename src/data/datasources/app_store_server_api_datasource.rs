@@ -14,6 +14,12 @@ use crate::{
     errors::{AppStoreServerApiError, AppStoreServerApiKeyInvalid},
 };
 
+#[derive(Debug, Clone, Copy)]
+enum Method {
+    Post,
+    Get,
+}
+
 #[async_trait]
 pub(crate) trait AppStoreServerApiDatasource: Send + Sync {
     /// Get Transaction Info:
@@ -29,7 +35,7 @@ pub(crate) trait AppStoreServerApiDatasource: Send + Sync {
 
     /// Request a test notification from Apple.
     /// https://developer.apple.com/documentation/appstoreserverapi/request_a_test_notification
-    async fn request_test_notification(&self) -> Result<(), ServerError>;
+    async fn request_test_notification(&self, sandbox: bool) -> Result<(), ServerError>;
 }
 
 pub(crate) struct AppStoreServerApiDatasourceImpl {
@@ -50,7 +56,12 @@ impl AppStoreServerApiDatasource for AppStoreServerApiDatasourceImpl {
             "https://api.storekit-sandbox.itunes.apple.com/inApps/v1/transactions/{transaction_id}"
         );
         let response_wrapper: TransactionInfoResponseModel = self
-            .callout_with_sandbox_fallback(&production_url, &sandbox_url, "GetTransactionInfo")
+            .callout_with_sandbox_fallback(
+                &production_url,
+                &sandbox_url,
+                "GetTransactionInfo",
+                Method::Get,
+            )
             .await?;
         validate_apple_signature(
             &response_wrapper.signed_transaction_info,
@@ -60,11 +71,12 @@ impl AppStoreServerApiDatasource for AppStoreServerApiDatasourceImpl {
         decode_jws_payload(&response_wrapper.signed_transaction_info)
     }
 
-    async fn request_test_notification(&self) -> Result<(), ServerError> {
-        let production_url = "https://api.storekit.itunes.apple.com/inApps/v1/notifications/test";
-        let sandbox_url =
-            "https://api.storekit-sandbox.itunes.apple.com/inApps/v1/notifications/test";
-        self.callout_with_sandbox_fallback(production_url, sandbox_url, "RequestTestNotification")
+    async fn request_test_notification(&self, sandbox: bool) -> Result<(), ServerError> {
+        let url = match sandbox {
+            false => "https://api.storekit.itunes.apple.com/inApps/v1/notifications/test",
+            true => "https://api.storekit-sandbox.itunes.apple.com/inApps/v1/notifications/test",
+        };
+        self.callout(url, "RequestTestNotification", Method::Post)
             .await
     }
 }
@@ -125,14 +137,15 @@ impl AppStoreServerApiDatasourceImpl {
         production_url: &str,
         sandbox_url: &str,
         function_name: &str,
+        method: Method,
     ) -> Result<T, ServerError> {
         // As per Apple's documentation, try production endpoint first. If it
         // fails, try checking the sandbox.
         //
         // If both fail, we will return the error from the production callout.
-        match self.callout(production_url, function_name).await {
+        match self.callout(production_url, function_name, method).await {
             Ok(production_response) => Ok(production_response),
-            Err(production_error) => match self.callout(sandbox_url, function_name).await {
+            Err(production_error) => match self.callout(sandbox_url, function_name, method).await {
                 Ok(sandbox_response) => Ok(sandbox_response),
                 Err(_sandbox_error) => Err(production_error),
             },
@@ -143,9 +156,14 @@ impl AppStoreServerApiDatasourceImpl {
         &self,
         url: &str,
         function_name: &str,
+        method: Method,
     ) -> Result<T, ServerError> {
-        let response = reqwest::Client::new()
-            .get(url)
+        let client = reqwest::Client::new();
+        let builder = match method {
+            Method::Post => client.post(url),
+            Method::Get => client.get(url),
+        };
+        let response = builder
             .header(AUTHORIZATION, format!("Bearer {}", self.jwt_token))
             .send()
             .await

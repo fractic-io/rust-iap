@@ -83,8 +83,10 @@ impl IapUtil {
     /// Currently, the only way to request test notifications from Apple is
     /// through the API. For Google Play, one can simply request test
     /// notifications in the console.
-    pub async fn request_apple_test_notification(&self) -> Result<(), ServerError> {
-        self.iap_repository.request_apple_test_notification().await
+    pub async fn request_apple_test_notification(&self, sandbox: bool) -> Result<(), ServerError> {
+        self.iap_repository
+            .request_apple_test_notification(sandbox)
+            .await
     }
 }
 
