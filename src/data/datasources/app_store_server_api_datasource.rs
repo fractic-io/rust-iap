@@ -102,7 +102,8 @@ impl AppStoreServerApiDatasourceImpl {
         jsonwebtoken::encode(
             &header,
             &claims,
-            &jsonwebtoken::EncodingKey::from_secret(api_key.as_ref()),
+            &jsonwebtoken::EncodingKey::from_ec_pem(api_key.as_ref())
+                .map_err(|e| AppStoreServerApiKeyInvalid::with_debug("invalid key format", &e))?,
         )
         .map_err(|e| AppStoreServerApiKeyInvalid::with_debug("failed to build JWT token", &e))
     }
