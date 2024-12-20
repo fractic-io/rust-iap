@@ -56,13 +56,13 @@ define_internal_error!(
 // JWS / JWT decoding and signature verification.
 define_sensitive_error!(
     InvalidGoogleSignature,
-    "Unable to verify the request was signed by Google (invalid component: {invalid_component}).",
+    "Unable to verify the message was signed by Google (invalid component: {invalid_component}).",
     { invalid_component: &str }
 );
 define_sensitive_error!(
-    InvalidS2SSignature,
-    "Unable to verify the server notification's authenticity (invalid component: {invalid_component}, origin: {origin:?}).",
-    { invalid_component: &str, origin: &str }
+    InvalidAppleSignature,
+    "Unable to verify the message was signed by Apple (invalid component: {invalid_component}).",
+    { invalid_component: &str }
 );
 define_sensitive_error!(
     InvalidJws,

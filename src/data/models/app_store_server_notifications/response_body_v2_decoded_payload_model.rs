@@ -47,6 +47,7 @@ pub(crate) struct ResponseBodyV2DecodedPayloadModel {
     pub(crate) signed_date: DateTime<Utc>,
     /// A unique identifier for the notification. Use this value to identify a
     /// duplicate notification.
+    #[serde(rename = "notificationUUID")]
     pub(crate) notification_uuid: String,
 }
 
@@ -350,7 +351,7 @@ pub(crate) struct NotificationData {
     /// The bundle identifier of the app.
     pub(crate) bundle_id: String,
     /// The version of the build that identifies an iteration of the bundle.
-    pub(crate) bundle_version: String,
+    pub(crate) bundle_version: Option<String>,
     /// The reason the customer requested the refund. This field appears only
     /// for CONSUMPTION_REQUEST notifications, which the server sends when a
     /// customer initiates a refund request for a consumable in-app purchase or
@@ -365,7 +366,7 @@ pub(crate) struct NotificationData {
     pub(crate) signed_renewal_info: Option<JWSRenewalInfo>,
     /// Transaction information signed by the App Store, in JSON Web Signature
     /// (JWS) format.
-    pub(crate) signed_transaction_info: JWSTransaction,
+    pub(crate) signed_transaction_info: Option<JWSTransaction>,
     /// The status of an auto-renewable subscription as of the signedDate in the
     /// responseBodyV2DecodedPayload. This field appears only for notifications
     /// sent for auto-renewable subscriptions.

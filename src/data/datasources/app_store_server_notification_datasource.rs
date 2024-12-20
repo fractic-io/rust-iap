@@ -3,7 +3,7 @@ use fractic_server_error::ServerError;
 
 use crate::{
     data::{
-        datasources::utils::{decode_jws_payload, validate_apple_signature},
+        datasources::utils::validate_and_parse_apple_jws,
         models::{
             app_store_server_api::{
                 jws_renewal_info_decoded_payload_model::JwsRenewalInfoDecodedPayloadModel,
@@ -57,21 +57,31 @@ impl AppStoreServerNotificationDatasource for AppStoreServerNotificationDatasour
     > {
         let wrapper: ResponseBodyV2Model = serde_json::from_str(body)
             .map_err(|e| AppStoreServerNotificationParseError::with_debug(&e))?;
-        validate_apple_signature(&wrapper.signed_payload, &self.expected_aud).await?;
         let decoded_payload: ResponseBodyV2DecodedPayloadModel =
-            decode_jws_payload(&wrapper.signed_payload)?;
-        let decoded_transaction_info: Option<JwsTransactionDecodedPayloadModel> = decoded_payload
-            .data
-            .as_ref()
-            .map(|data| decode_jws_payload(&data.signed_transaction_info))
-            .transpose()?;
-        let decoded_renewal_info: Option<JwsRenewalInfoDecodedPayloadModel> = decoded_payload
+            validate_and_parse_apple_jws(&wrapper.signed_payload, &self.expected_aud).await?;
+        let decoded_transaction_info: Option<JwsTransactionDecodedPayloadModel> =
+            match decoded_payload
+                .data
+                .as_ref()
+                .map(|data| data.signed_transaction_info.as_ref())
+                .flatten()
+            {
+                Some(transaction_info) => {
+                    Some(validate_and_parse_apple_jws(transaction_info, &self.expected_aud).await?)
+                }
+                None => None,
+            };
+        let decoded_renewal_info: Option<JwsRenewalInfoDecodedPayloadModel> = match decoded_payload
             .data
             .as_ref()
             .map(|data| data.signed_renewal_info.as_ref())
             .flatten()
-            .map(|renewal_info| decode_jws_payload(&renewal_info))
-            .transpose()?;
+        {
+            Some(renewal_info) => {
+                Some(validate_and_parse_apple_jws(renewal_info, &self.expected_aud).await?)
+            }
+            None => None,
+        };
         Ok((
             decoded_payload,
             decoded_transaction_info,

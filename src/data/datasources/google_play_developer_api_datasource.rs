@@ -12,7 +12,7 @@ use crate::{
     errors::{GooglePlayDeveloperApiError, GooglePlayDeveloperApiKeyInvalid},
 };
 
-use super::utils::validate_google_signature;
+use super::utils::validate_google_header;
 
 #[async_trait]
 pub(crate) trait GooglePlayDeveloperApiDatasource: Send + Sync {
@@ -166,7 +166,7 @@ impl GooglePlayDeveloperApiDatasourceImpl {
             ));
         }
 
-        validate_google_signature(
+        validate_google_header(
             response
                 .headers()
                 .get(AUTHORIZATION)

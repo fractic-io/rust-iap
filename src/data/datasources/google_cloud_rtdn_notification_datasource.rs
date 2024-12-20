@@ -4,7 +4,7 @@ use fractic_server_error::ServerError;
 
 use crate::{
     data::{
-        datasources::utils::validate_google_signature,
+        datasources::utils::validate_google_header,
         models::google_cloud_rtdn_notifications::{
             developer_notification_model::DeveloperNotificationModel, pub_sub_model::PubSubModel,
         },
@@ -37,7 +37,7 @@ impl GoogleCloudRtdnNotificationDatasource for GoogleCloudRtdnNotificationDataso
         authorization_header: &str,
         body: &str,
     ) -> Result<(PubSubModel, DeveloperNotificationModel), ServerError> {
-        validate_google_signature(authorization_header, &self.expected_aud).await?;
+        validate_google_header(authorization_header, &self.expected_aud).await?;
         let wrapper: PubSubModel = serde_json::from_str(body).map_err(|e| {
             GoogleCloudRtdnNotificationParseError::with_debug("failed to parse Pub/Sub wrapper", &e)
         })?;

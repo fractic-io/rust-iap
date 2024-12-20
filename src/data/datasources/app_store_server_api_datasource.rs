@@ -5,7 +5,7 @@ use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use crate::{
     data::{
-        datasources::utils::{decode_jws_payload, validate_apple_signature},
+        datasources::utils::validate_and_parse_apple_jws,
         models::app_store_server_api::{
             jws_transaction_decoded_payload_model::JwsTransactionDecodedPayloadModel,
             send_test_notification_response::SendTestNotificationResponse,
@@ -64,12 +64,11 @@ impl AppStoreServerApiDatasource for AppStoreServerApiDatasourceImpl {
                 Method::Get,
             )
             .await?;
-        validate_apple_signature(
+        validate_and_parse_apple_jws(
             &response_wrapper.signed_transaction_info,
             &self.expected_aud,
         )
-        .await?;
-        decode_jws_payload(&response_wrapper.signed_transaction_info)
+        .await
     }
 
     async fn request_test_notification(&self, sandbox: bool) -> Result<String, ServerError> {
