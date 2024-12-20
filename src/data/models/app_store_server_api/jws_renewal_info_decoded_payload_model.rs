@@ -34,7 +34,7 @@ pub(crate) struct JwsRenewalInfoDecodedPayloadModel {
     pub(crate) expiration_intent: Option<ExpirationIntent>,
     /// The time when the Billing Grace Period for subscription renewals
     /// expires.
-    #[serde(with = "ts_milliseconds_option")]
+    #[serde(default, with = "ts_milliseconds_option")]
     pub(crate) grace_period_expires_date: Option<DateTime<Utc>>,
     /// A Boolean value that indicates whether the App Store is attempting to
     /// automatically renew the expired subscription.
@@ -57,11 +57,11 @@ pub(crate) struct JwsRenewalInfoDecodedPayloadModel {
     /// The earliest start date of the auto-renewable subscription in a series
     /// of subscription purchases that ignores all lapses of paid service that
     /// are 60 days or fewer.
-    #[serde(with = "ts_milliseconds_option")]
+    #[serde(default, with = "ts_milliseconds_option")]
     pub(crate) recent_subscription_start_date: Option<DateTime<Utc>>,
     /// The UNIX time, in milliseconds, when the most recent auto-renewable
     /// subscription purchase expires.
-    #[serde(with = "ts_milliseconds_option")]
+    #[serde(default, with = "ts_milliseconds_option")]
     pub(crate) renewal_date: Option<DateTime<Utc>>,
     /// The renewal price, in milliunits, of the auto-renewable subscription
     /// that renews at the next billing period.

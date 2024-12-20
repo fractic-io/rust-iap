@@ -32,7 +32,7 @@ pub struct JwsTransactionDecodedPayloadModel {
     /// The server environment, either sandbox or production.
     pub(crate) environment: Environment,
     /// The UNIX time, in milliseconds, that the subscription expires or renews.
-    #[serde(with = "ts_milliseconds_option")]
+    #[serde(default, with = "ts_milliseconds_option")]
     pub(crate) expires_date: Option<DateTime<Utc>>,
     /// A string that describes whether the transaction was purchased by the
     /// customer, or is available to them through Family Sharing.
@@ -51,7 +51,7 @@ pub struct JwsTransactionDecodedPayloadModel {
     pub(crate) offer_type: Option<OfferType>,
     /// The UNIX time, in milliseconds, that represents the purchase date of the
     /// original transaction identifier.
-    #[serde(with = "ts_milliseconds_option")]
+    #[serde(default, with = "ts_milliseconds_option")]
     pub(crate) original_purchase_date: Option<DateTime<Utc>>,
     /// The transaction identifier of the original purchase.
     pub(crate) original_transaction_id: String,
@@ -72,7 +72,7 @@ pub struct JwsTransactionDecodedPayloadModel {
     pub(crate) quantity: Option<i32>,
     /// The UNIX time, in milliseconds, that the App Store refunded the
     /// transaction or revoked it from Family Sharing.
-    #[serde(with = "ts_milliseconds_option")]
+    #[serde(default, with = "ts_milliseconds_option")]
     pub(crate) revocation_date: Option<DateTime<Utc>>,
     /// The reason that the App Store refunded the transaction or revoked it
     /// from Family Sharing.
