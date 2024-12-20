@@ -215,7 +215,6 @@ impl
             ),
             google_play_developer_api_datasource: GooglePlayDeveloperApiDatasourceImpl::new(
                 google_api_key,
-                expected_aud.clone(),
             )
             .await?,
             google_cloud_rtdn_notification_datasource:
