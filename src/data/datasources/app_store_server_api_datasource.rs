@@ -26,6 +26,10 @@ pub(crate) trait AppStoreServerApiDatasource: Send + Sync {
         &self,
         transaction_id: &str,
     ) -> Result<JwsTransactionDecodedPayloadModel, ServerError>;
+
+    /// Request a test notification from Apple.
+    /// https://developer.apple.com/documentation/appstoreserverapi/request_a_test_notification
+    async fn request_test_notification(&self) -> Result<(), ServerError>;
 }
 
 pub(crate) struct AppStoreServerApiDatasourceImpl {
@@ -54,6 +58,14 @@ impl AppStoreServerApiDatasource for AppStoreServerApiDatasourceImpl {
         )
         .await?;
         decode_jws_payload(&response_wrapper.signed_transaction_info)
+    }
+
+    async fn request_test_notification(&self) -> Result<(), ServerError> {
+        let production_url = "https://api.storekit.itunes.apple.com/inApps/v1/notifications/test";
+        let sandbox_url =
+            "https://api.storekit-sandbox.itunes.apple.com/inApps/v1/notifications/test";
+        self.callout_with_sandbox_fallback(production_url, sandbox_url, "RequestTestNotification")
+            .await
     }
 }
 

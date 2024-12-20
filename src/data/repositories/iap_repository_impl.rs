@@ -175,6 +175,12 @@ impl<
             details,
         })
     }
+
+    async fn request_apple_test_notification(&self) -> Result<(), ServerError> {
+        self.app_store_server_api_datasource
+            .request_test_notification()
+            .await
+    }
 }
 
 impl

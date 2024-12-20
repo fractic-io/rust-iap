@@ -52,4 +52,6 @@ pub trait IapRepository: Send + Sync {
         authorization_header: &str,
         body: &str,
     ) -> Result<IapUpdateNotification, ServerError>;
+
+    async fn request_apple_test_notification(&self) -> Result<(), ServerError>;
 }
