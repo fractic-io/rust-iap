@@ -60,8 +60,8 @@ define_sensitive_error!(
     { invalid_component: &str }
 );
 define_sensitive_error!(
-    InvalidAppleSignature,
-    "Unable to verify the request was signed by Apple (invalid component: {invalid_component}).",
+    InvalidS2SSignature,
+    "Unable to verify the request's Authorization header (invalid component: {invalid_component}).",
     { invalid_component: &str }
 );
 define_sensitive_error!(

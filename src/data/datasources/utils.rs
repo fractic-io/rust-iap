@@ -7,7 +7,7 @@ use serde::de::DeserializeOwned;
 
 use crate::{
     constants::{APPLE_JWK_URL, GOOGLE_JWK_URL},
-    errors::{InvalidAppleSignature, InvalidJws},
+    errors::{InvalidJws, InvalidS2SSignature},
 };
 
 /// Decodes the payload from a JWS object, without performing any signature
@@ -40,10 +40,15 @@ pub(crate) async fn validate_apple_signature(
 
 /// Validates that the jwt is signed by Google.
 pub(crate) async fn validate_google_signature(
-    jwt: &str,
+    authentication_header: &str,
     expected_aud: &str,
 ) -> Result<(), ServerError> {
-    validate_token(jwt, GOOGLE_JWK_URL.to_string(), expected_aud).await
+    validate_token(
+        authentication_header.trim_start_matches("Bearer ").trim(),
+        GOOGLE_JWK_URL.to_string(),
+        expected_aud,
+    )
+    .await
 }
 
 async fn validate_token(
@@ -59,13 +64,13 @@ async fn validate_token(
     let result = verifier
         .verify::<serde_json::Map<String, serde_json::Value>>(token)
         .await
-        .map_err(|e| InvalidAppleSignature::with_debug("token", &e))?;
+        .map_err(|e| InvalidS2SSignature::with_debug("token", &e))?;
     let valid_aud = match result.claims().aud {
         OneOrMany::One(ref aud) => aud == expected_aud,
         OneOrMany::Vec(ref auds) => auds.iter().any(|aud| aud == expected_aud),
     };
     if !valid_aud {
-        return Err(InvalidAppleSignature::with_debug(
+        return Err(InvalidS2SSignature::with_debug(
             "audience",
             &result.claims(),
         ));
