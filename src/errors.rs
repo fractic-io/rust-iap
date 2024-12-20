@@ -61,8 +61,8 @@ define_sensitive_error!(
 );
 define_sensitive_error!(
     InvalidS2SSignature,
-    "Unable to verify the request's Authorization header (invalid component: {invalid_component}).",
-    { invalid_component: &str }
+    "Unable to verify the server notification's authenticity (invalid component: {invalid_component}, origin: {origin:?}).",
+    { invalid_component: &str, origin: &str }
 );
 define_sensitive_error!(
     InvalidJws,

@@ -8,6 +8,7 @@ use crate::{
         datasources::utils::{decode_jws_payload, validate_apple_signature},
         models::app_store_server_api::{
             jws_transaction_decoded_payload_model::JwsTransactionDecodedPayloadModel,
+            send_test_notification_response::SendTestNotificationResponse,
             transaction_info_response_model::TransactionInfoResponseModel,
         },
     },
@@ -35,7 +36,7 @@ pub(crate) trait AppStoreServerApiDatasource: Send + Sync {
 
     /// Request a test notification from Apple.
     /// https://developer.apple.com/documentation/appstoreserverapi/request_a_test_notification
-    async fn request_test_notification(&self, sandbox: bool) -> Result<(), ServerError>;
+    async fn request_test_notification(&self, sandbox: bool) -> Result<String, ServerError>;
 }
 
 pub(crate) struct AppStoreServerApiDatasourceImpl {
@@ -71,13 +72,15 @@ impl AppStoreServerApiDatasource for AppStoreServerApiDatasourceImpl {
         decode_jws_payload(&response_wrapper.signed_transaction_info)
     }
 
-    async fn request_test_notification(&self, sandbox: bool) -> Result<(), ServerError> {
+    async fn request_test_notification(&self, sandbox: bool) -> Result<String, ServerError> {
         let url = match sandbox {
             false => "https://api.storekit.itunes.apple.com/inApps/v1/notifications/test",
             true => "https://api.storekit-sandbox.itunes.apple.com/inApps/v1/notifications/test",
         };
-        self.callout(url, "RequestTestNotification", Method::Post)
-            .await
+        Ok(self
+            .callout::<SendTestNotificationResponse>(url, "RequestTestNotification", Method::Post)
+            .await?
+            .test_notification_token)
     }
 }
 
