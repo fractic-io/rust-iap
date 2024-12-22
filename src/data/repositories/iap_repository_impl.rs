@@ -79,7 +79,7 @@ impl<
         purchase_id: IapPurchaseId,
         include_price_info: bool,
     ) -> Result<IapDetails<T::DetailsType>, ServerError> {
-        let iap_details = match purchase_id {
+        let iap_details = match &purchase_id {
             IapPurchaseId::AppStoreTransactionId(transaction_id) => {
                 let m = self
                     .app_store_server_api_datasource
@@ -92,7 +92,7 @@ impl<
                     _ProductIdType::Consumable | _ProductIdType::NonConsumable => {
                         let m = self
                             .google_play_developer_api_datasource
-                            .get_product_purchase(&self.application_id, product_id.sku(), &token)
+                            .get_product_purchase(&self.application_id, product_id.sku(), token)
                             .await?;
                         let p = if include_price_info {
                             Some(
@@ -103,12 +103,12 @@ impl<
                         } else {
                             None
                         };
-                        IapDetails::from_google_product_purchase::<T>(m, p)?
+                        IapDetails::from_google_product_purchase::<T>(purchase_id, m, p)?
                     }
                     _ProductIdType::Subscription => {
                         let m = self
                             .google_play_developer_api_datasource
-                            .get_subscription_purchase_v2(&self.application_id, &token)
+                            .get_subscription_purchase_v2(&self.application_id, token)
                             .await?;
                         // Price info not available for subscriptions.
                         //
@@ -117,7 +117,7 @@ impl<
                         // complex as it requires determining which base plan is
                         // purchased.
                         let p = None;
-                        IapDetails::from_google_subscription_purchase::<T>(m, p)?
+                        IapDetails::from_google_subscription_purchase::<T>(purchase_id, m, p)?
                     }
                 }
             }
@@ -253,6 +253,7 @@ impl<U: IapTypeSpecificDetails> IapDetails<U> {
         include_price_info: bool,
     ) -> Result<Self, ServerError> {
         Ok(IapDetails {
+            cannonical_id: IapPurchaseId::AppStoreTransactionId(m.original_transaction_id.clone()),
             // NOTE: For subscriptions, we should also check the expiry date.
             // This field is only present for subscriptions, so assume true if
             // it is not present (its presence for subscriptions is validated by
@@ -287,10 +288,12 @@ impl<U: IapTypeSpecificDetails> IapDetails<U> {
     }
 
     fn from_google_product_purchase<T: TypedProductId<DetailsType = U>>(
+        purchase_id: IapPurchaseId,
         m: gp::ProductPurchaseModel,
         p: Option<gi::InAppProductModel>,
     ) -> Result<Self, ServerError> {
         Ok(IapDetails {
+            cannonical_id: purchase_id,
             is_active: m.purchase_state == gp::PurchaseState::Purchased,
             is_sandbox: m.purchase_type == Some(gp::PurchaseType::Test),
             is_finalized_by_client: Known(
@@ -315,10 +318,12 @@ impl<U: IapTypeSpecificDetails> IapDetails<U> {
     }
 
     fn from_google_subscription_purchase<T: TypedProductId<DetailsType = U>>(
+        purchase_id: IapPurchaseId,
         m: gs::SubscriptionPurchaseV2Model,
         p: Option<gi::InAppProductModel>,
     ) -> Result<Self, ServerError> {
         Ok(IapDetails {
+            cannonical_id: purchase_id,
             // NOTE: Certain states (ex. SubscriptionStateCanceled) may indicate
             // the subscription is no longer being renewed, but it may still be
             // active if it has not yet expired.
@@ -667,9 +672,11 @@ impl NotificationDetails {
                 NotificationDetails::SubscriptionStarted {
                     application_id,
                     product_id,
-                    purchase_id,
+                    purchase_id: purchase_id.clone(),
                     details: IapDetails::from_google_subscription_purchase::<IapSubscriptionId>(
-                        api_data, None,
+                        purchase_id,
+                        api_data,
+                        None,
                     )?,
                 }
             }
@@ -681,7 +688,7 @@ impl NotificationDetails {
                 NotificationDetails::SubscriptionExpiryChanged {
                     application_id,
                     product_id,
-                    purchase_id,
+                    purchase_id: purchase_id.clone(),
                     renewal_id: if notification.notification_type
                         == gn::SubscriptionNotificationType::SubscriptionRenewed
                         || notification.notification_type
@@ -692,7 +699,9 @@ impl NotificationDetails {
                         None
                     },
                     details: IapDetails::from_google_subscription_purchase::<IapSubscriptionId>(
-                        api_data, None,
+                        purchase_id,
+                        api_data,
+                        None,
                     )?,
                 }
             }
@@ -736,9 +745,11 @@ impl NotificationDetails {
                 NotificationDetails::SubscriptionEnded {
                     application_id,
                     product_id,
-                    purchase_id,
+                    purchase_id: purchase_id.clone(),
                     details: IapDetails::from_google_subscription_purchase::<IapSubscriptionId>(
-                        api_data, None,
+                        purchase_id,
+                        api_data,
+                        None,
                     )?,
                     reason,
                 }
@@ -797,6 +808,8 @@ impl NotificationDetails {
                 let m = google_play_developer_api_datasource
                     .get_subscription_purchase_v2(&application_id, &notification.purchase_token)
                     .await?;
+                let purchase_id =
+                    IapPurchaseId::GooglePlayPurchaseToken(notification.purchase_token);
                 NotificationDetails::SubscriptionEnded {
                     application_id,
                     product_id: IapSubscriptionId(
@@ -810,11 +823,11 @@ impl NotificationDetails {
                             .product_id
                             .clone(),
                     ),
-                    purchase_id: IapPurchaseId::GooglePlayPurchaseToken(
-                        notification.purchase_token,
-                    ),
+                    purchase_id: purchase_id.clone(),
                     details: IapDetails::from_google_subscription_purchase::<IapSubscriptionId>(
-                        m, None,
+                        purchase_id,
+                        m,
+                        None,
                     )?,
                     reason: SubscriptionEndReason::Voided {
                         is_refunded: notification.refund_type

@@ -1,5 +1,7 @@
 use chrono::{DateTime, Utc};
 
+use super::iap_purchase_id::IapPurchaseId;
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum MaybeKnown<T> {
     Known(T),
@@ -17,6 +19,7 @@ pub struct PriceInfo {
 
 #[derive(Debug, Clone)]
 pub struct IapDetails<T: IapTypeSpecificDetails> {
+    pub cannonical_id: IapPurchaseId,
     pub is_active: bool,
     pub is_sandbox: bool,
     pub is_finalized_by_client: MaybeKnown<bool>,
