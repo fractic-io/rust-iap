@@ -22,21 +22,21 @@ use crate::{
 
 static APPLE_TRUST_STORE: Lazy<Result<X509Store, ErrorStack>> = Lazy::new(|| {
     let mut store_builder = X509StoreBuilder::new()?;
-    X509::from_der(include_bytes!("../../../res/trust/AppleRootCA-G2.cer"))
+    X509::from_der(include_bytes!("../../../../res/trust/AppleRootCA-G2.cer"))
         .and_then(|cert| store_builder.add_cert(cert))?;
-    X509::from_der(include_bytes!("../../../res/trust/AppleRootCA-G3.cer"))
+    X509::from_der(include_bytes!("../../../../res/trust/AppleRootCA-G3.cer"))
         .and_then(|cert| store_builder.add_cert(cert))?;
-    X509::from_der(include_bytes!("../../../res/trust/AppleWWDRCAG2.cer"))
+    X509::from_der(include_bytes!("../../../../res/trust/AppleWWDRCAG2.cer"))
         .and_then(|cert| store_builder.add_cert(cert))?;
-    X509::from_der(include_bytes!("../../../res/trust/AppleWWDRCAG3.cer"))
+    X509::from_der(include_bytes!("../../../../res/trust/AppleWWDRCAG3.cer"))
         .and_then(|cert| store_builder.add_cert(cert))?;
-    X509::from_der(include_bytes!("../../../res/trust/AppleWWDRCAG4.cer"))
+    X509::from_der(include_bytes!("../../../../res/trust/AppleWWDRCAG4.cer"))
         .and_then(|cert| store_builder.add_cert(cert))?;
-    X509::from_der(include_bytes!("../../../res/trust/AppleWWDRCAG5.cer"))
+    X509::from_der(include_bytes!("../../../../res/trust/AppleWWDRCAG5.cer"))
         .and_then(|cert| store_builder.add_cert(cert))?;
-    X509::from_der(include_bytes!("../../../res/trust/AppleWWDRCAG6.cer"))
+    X509::from_der(include_bytes!("../../../../res/trust/AppleWWDRCAG6.cer"))
         .and_then(|cert| store_builder.add_cert(cert))?;
-    X509::from_der(include_bytes!("../../../res/trust/AppleWWDRCAG8.cer"))
+    X509::from_der(include_bytes!("../../../../res/trust/AppleWWDRCAG8.cer"))
         .and_then(|cert| store_builder.add_cert(cert))?;
     Ok(store_builder.build())
 });
