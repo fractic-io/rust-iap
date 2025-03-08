@@ -2,15 +2,7 @@ use fractic_env_config::SecretValues;
 use fractic_server_error::ServerError;
 
 use crate::{
-    data::{
-        datasources::{
-            app_store_server_api_datasource::AppStoreServerApiDatasourceImpl,
-            app_store_server_notification_datasource::AppStoreServerNotificationDatasourceImpl,
-            google_cloud_rtdn_notification_datasource::GoogleCloudRtdnNotificationDatasourceImpl,
-            google_play_developer_api_datasource::GooglePlayDeveloperApiDatasourceImpl,
-        },
-        repositories::iap_repository_impl::IapRepositoryImpl,
-    },
+    data::repositories::iap_repository_impl::IapRepositoryImpl,
     domain::{
         entities::{
             iap_details::IapDetails, iap_product_id::IapConsumableId,
@@ -22,12 +14,7 @@ use crate::{
 };
 
 pub struct IapUtil {
-    iap_repository: IapRepositoryImpl<
-        AppStoreServerApiDatasourceImpl,
-        AppStoreServerNotificationDatasourceImpl,
-        GooglePlayDeveloperApiDatasourceImpl,
-        GoogleCloudRtdnNotificationDatasourceImpl,
-    >,
+    iap_repository: IapRepositoryImpl,
 }
 
 impl IapUtil {

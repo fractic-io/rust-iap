@@ -53,25 +53,30 @@ use crate::{
 use MaybeKnown::*;
 
 pub(crate) struct IapRepositoryImpl<
-    A: AppStoreServerApiDatasource,
-    B: AppStoreServerNotificationDatasource,
-    C: GooglePlayDeveloperApiDatasource,
-    D: GoogleCloudRtdnNotificationDatasource,
-> {
-    app_store_server_api_datasource: A,
-    app_store_server_notification_datasource: B,
-    google_play_developer_api_datasource: C,
-    google_cloud_rtdn_notification_datasource: D,
+    DS1 = AppStoreServerApiDatasourceImpl,           // Default.
+    DS2 = AppStoreServerNotificationDatasourceImpl,  // Default.
+    DS3 = GooglePlayDeveloperApiDatasourceImpl,      // Default.
+    DS4 = GoogleCloudRtdnNotificationDatasourceImpl, // Default.
+> where
+    DS1: AppStoreServerApiDatasource,
+    DS2: AppStoreServerNotificationDatasource,
+    DS3: GooglePlayDeveloperApiDatasource,
+    DS4: GoogleCloudRtdnNotificationDatasource,
+{
+    app_store_server_api_datasource: DS1,
+    app_store_server_notification_datasource: DS2,
+    google_play_developer_api_datasource: DS3,
+    google_cloud_rtdn_notification_datasource: DS4,
     application_id: String,
 }
 
 #[async_trait]
-impl<
-        A: AppStoreServerApiDatasource,
-        B: AppStoreServerNotificationDatasource,
-        C: GooglePlayDeveloperApiDatasource,
-        D: GoogleCloudRtdnNotificationDatasource,
-    > IapRepository for IapRepositoryImpl<A, B, C, D>
+impl<DS1, DS2, DS3, DS4> IapRepository for IapRepositoryImpl<DS1, DS2, DS3, DS4>
+where
+    DS1: AppStoreServerApiDatasource,
+    DS2: AppStoreServerNotificationDatasource,
+    DS3: GooglePlayDeveloperApiDatasource,
+    DS4: GoogleCloudRtdnNotificationDatasource,
 {
     async fn verify_and_get_details<T: TypedProductId>(
         &self,
@@ -206,14 +211,7 @@ impl<
     }
 }
 
-impl
-    IapRepositoryImpl<
-        AppStoreServerApiDatasourceImpl,
-        AppStoreServerNotificationDatasourceImpl,
-        GooglePlayDeveloperApiDatasourceImpl,
-        GoogleCloudRtdnNotificationDatasourceImpl,
-    >
-{
+impl IapRepositoryImpl {
     pub(crate) async fn new(
         application_id: impl Into<String>,
         expected_aud: impl Into<String>,
