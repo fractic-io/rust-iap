@@ -37,7 +37,7 @@ use fractic_iap::{
 
 ## 2. Execution Flow
 
-1. **Construction** – `IapUtil::from_secrets` / `from_values` produces an `IapRepositoryImpl`, wiring Apple & Google datasources with the caller's credentials.
+1. **Construction** – `IapUtil::from_context` / `from_values` produces an `IapRepositoryImpl`, wiring Apple & Google datasources with the caller's credentials.
 2. **Verification** – `IapUtil::verify_and_get_details` → domain trait `IapRepository` → `IapRepositoryImpl` → datasource (`app_store_server_api` or `google_play_developer_api`) → raw JSON/JWS models → domain `IapDetails<T>`.
 3. **Notification parsing** – `IapUtil::parse_*_notification` validates signature (Google JWK or Apple OAuth → JWS) → domain `IapUpdateNotification`.
 4. **Consumption** – `IapUtil::consume` delegates to Google Play API; Apple is a no-op by contract.

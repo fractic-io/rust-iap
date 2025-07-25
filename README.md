@@ -1,150 +1,97 @@
-Rust utility for validating in-app purchases (IAP) made through the Apple App Store or Google Play Store, and parsing server-to-server change notifications (for refunds, subscription cancellations, etc.).
+# fractic-iap
 
-It should be able to handle all purchase types (Consumable, NonConsumable, Subscription), and almost all server notification types. It currently does not support differentiating between different tiers of a given subscription (tier upgrade/downgrade notifications are ignored), since that's an Apple-only feature. Subscription price change notifications are also ignored, but could be added fairly easily.
+Stateless helper for:
 
-This code is provided as-is. For the time being, attention will not be given to backwards compatibility or clear documentation. It is open-sourced mainly for the chance that snippets may be useful to others looking to do similar tasks. Eventually, this may become a real library, well-documented, etc., for uploading to crates.io.
+* Verifying Apple App Store & Google Play purchases (consumable, non-consumable, subscription).
+* Parsing server-to-server update notifications (refunds, cancellations, expiry changes, …).
 
-## Usage
+The crate is transport-agnostic and does not persist anything – bring your own database / message bus.
 
-### Option 1: Using AWS Secrets Manager
+---
 
-To use API keys stored in AWS Secrets Manager:
+## Option 1:
+
+Use [fractic-context](https://github.com/fractic-io/rust-context) to load credentials once at startup and share them application-wide.
 
 ```rust
-use fractic_env_config::{
-    define_env_config, define_secrets_config,
-    EnvConfigEnum, load_env, load_secrets,
-    SecretsConfigEnum, SECRETS_ID, SECRETS_REGION,
-};
+use fractic_context::define_ctx;
+use fractic_iap::{util::IapUtil, IapCtxView};
 use fractic_server_error::ServerError;
-use fractic_iap::{
-    domain::entities::{
-        iap_details::{IapDetails, NonConsumableDetails, SubscriptionDetails},
-        iap_product_id::{IapNonConsumableId, IapSubscriptionId},
-        iap_purchase_id::IapPurchaseId,
-        iap_update_notification::{IapUpdateNotification, NotificationDetails},
+
+// ▶ 1. Declare the application-level context.
+//    Secrets are fetched from AWS Secrets Manager secret `SECRETS_ID`
+//    located in region `SECRETS_REGION` (env vars).
+//    The secret JSON must contain the keys shown below.
+define_ctx! {
+    name: Ctx,
+    env {},
+    secrets_fetch_region: SECRETS_REGION,
+    secrets_fetch_id: SECRETS_ID,
+    secrets {
+        GOOGLE_API_KEY: String,
+        APPLE_API_KEY: String,
+        APPLE_KEY_ID:  String,
+        APPLE_ISSUER_ID: String,
     },
-    secrets::{APPLE_API_KEY, APPLE_ISSUER_ID, APPLE_KEY_ID, GOOGLE_API_KEY},
-    util::IapUtil,
-};
-
-// The set-up below causes the fractic-env-config library to fetch secret ID
-// "SECRETS_ID" from region "SECRETS_REGION", and expects it to be structured as
-// JSON with the keys "GOOGLE_API_KEY", "APPLE_API_KEY", ...
-// ---------------------------------------------------------
-
-// Set up environment variables.
-//
-// This config causes the fractic-env-config library to fetch the environment
-// variables "SECRETS_REGION" and "SECRETS_ID", which are the minimum keys
-// required for the config to be accepted by load_secrets(...).
-define_env_config!(
-    EnvConfig,
-    SecretsRegion => SECRETS_REGION,
-    SecretsId => SECRETS_ID,
-);
-
-// Set up secrets.
-//
-// This config causes the fractic-env_config library to fetch the keys
-// "GOOGLE_API_KEY", "APPLE_API_KEY", ..., from the AWS Secrets Manager secret
-// JSON at "SECRETS_ID", which are the minimum keys required for the config to
-// be accepted by the IAP util.
-define_secrets_config!(
-    SecretsConfig,
-    GoogleApiKey => GOOGLE_API_KEY,
-    AppleApiKey => APPLE_API_KEY,
-    AppleKeyId => APPLE_KEY_ID,
-    AppleIssuerId => APPLE_ISSUER_ID,
-);
+    deps {},
+    // Expose only what fractic-iap needs.
+    views { IapCtxView }
+}
 
 async fn run() -> Result<(), ServerError> {
-    // Load the env / secrets.
-    let env = load_env::<EnvConfig>()?;
-    let secrets = load_secrets::<SecretsConfig>(env.clone_into()?).await?;
+    // ▶ 2. Initialise context once.
+    let ctx = Ctx::init().await?;
 
-    // Load the utility.
-    let iap_util = IapUtil::from_secrets(
-        secrets.clone_into()?,
-        // Application ID (also referred to as bundle ID or package name).
-        "com.example.appid",
-        // When validating API payloads, only tokens with matching 'aud' claim
-        // will be accepted.
-        "<expected_aud_claim>"
+    // ▶ 3. Construct the utility.
+    let iap = IapUtil::from_context(
+        &*ctx,
+        "com.example.app",        // application / bundle id
+        "expected_aud_claim",    // JWT `aud` claim to require
     ).await?;
 
-    // Verify a purchase from Apple.
-    let apple_purchase: IapDetails<NonConsumableDetails> = iap_util
+    // Verify a purchase originating from Apple.
+    use fractic_iap::domain::{
+        entities::{iap_product_id::IapNonConsumableId, iap_purchase_id::IapPurchaseId},
+        entities::iap_details::{IapDetails, NonConsumableDetails},
+    };
+
+    let details: IapDetails<NonConsumableDetails> = iap
         .verify_and_get_details(
             IapNonConsumableId("product_sku".into()),
-            IapPurchaseId::AppStoreTransactionId("transaction_id".into()),
-            /* include_price_info: */ true,
-            /* error_if_not_active: */ true,
+            IapPurchaseId::AppStoreTransactionId("tx_id".into()),
+            /* include_price */ true,
         )
         .await?;
 
-    // Verify a purchase from Google.
-    let google_purchase: IapDetails<SubscriptionDetails> = iap_util
-        .verify_and_get_details(
-            IapSubscriptionId("product_sku".into()),
-            IapPurchaseId::GooglePlayPurchaseToken("token".into()),
-            /* include_price_info: */ true,
-            /* error_if_not_active: */ true,
-        )
-        .await?;
-
-    // Parse a notification from Apple.
-    let body: &str = "...";
-    let notification: IapUpdateNotification = iap_util
-        .parse_apple_notification(body)
-        .await?;
-    match notification.details {
-        NotificationDetails::Test => {}
-        NotificationDetails::ConsumableVoided { .. } => { /* handler */ }
-        NotificationDetails::NonConsumableVoided { .. } => { /* handler */ }
-        NotificationDetails::SubscriptionEnded { .. } => { /* handler */ }
-        NotificationDetails::SubscriptionExpiryChanged { .. } => { /* handler */ }
-        /* etc. */
-    }
-
-    // Parse a notification from Google.
-    let authorization: &str = "..."; // Request's "Authorization" header.
-    let body: &str = "...";
-    let google_notification: IapUpdateNotification = iap_util
-        .parse_google_notification(authorization, body)
-        .await?;
-    match notification.details {
-        ...
-    }
-
+    // … handle `details` / notifications etc.
     Ok(())
 }
 ```
 
-### Option 2: Hardcoding Secrets
+---
 
-To inline the API keys directly:
+## Option 2:
+
+If you prefer to inject secrets manually:
 
 ```rust
-use fractic_server_error::ServerError;
 use fractic_iap::util::IapUtil;
 
-async fn run() -> Result<(), ServerError> {
-    let iap_util = IapUtil::from_values(
-        "com.example.appid",
-        "<expected_aud_claim>",
-        "Apple API Key",
-        "Apple Key ID",
-        "Apple Issuer ID",
-        "Google API Key",
-    ).await?;
-
-    let purchase = iap_repository
-        .verify_and_get_details(
-            ...
-        )
-        .await?;
-
-    ...
-}
+let iap = IapUtil::from_values(
+    "com.example.app",           // application / bundle id
+    "expected_aud_claim",        // JWT `aud` claim to require
+    "<apple_api_key>",
+    "<apple_key_id>",
+    "<apple_issuer_id>",
+    "<google_api_key>",
+).await?;
 ```
+
+---
+
+### Feature status
+
+* ✅ Purchase verification for Apple / Google (all product types).
+* ✅ Server-to-server notifications parsing (most events).
+* ⬜ Subscription tier change events (Apple only).
+* ⬜ Subscription price change events.
