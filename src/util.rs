@@ -1,4 +1,3 @@
-use fractic_env_config::SecretValues;
 use fractic_server_error::ServerError;
 
 use crate::{
@@ -10,7 +9,7 @@ use crate::{
         },
         repositories::iap_repository::{IapRepository, TypedProductId},
     },
-    secrets::IapSecretsConfig,
+    IapCtxView,
 };
 
 pub struct IapUtil {
@@ -96,8 +95,8 @@ impl IapUtil {
 }
 
 impl IapUtil {
-    pub async fn from_secrets(
-        secrets: SecretValues<IapSecretsConfig>,
+    pub async fn from_context(
+        ctx: &dyn IapCtxView,
         application_id: impl Into<String>,
         aud_claim: impl Into<String>,
     ) -> Result<Self, ServerError> {
@@ -105,10 +104,10 @@ impl IapUtil {
             iap_repository: IapRepositoryImpl::new(
                 application_id,
                 aud_claim,
-                secrets.get(&IapSecretsConfig::AppleApiKey)?,
-                secrets.get(&IapSecretsConfig::AppleKeyId)?,
-                secrets.get(&IapSecretsConfig::AppleIssuerId)?,
-                secrets.get(&IapSecretsConfig::GoogleApiKey)?,
+                ctx.apple_api_key(),
+                ctx.apple_key_id(),
+                ctx.apple_issuer_id(),
+                ctx.google_api_key(),
             )
             .await?,
         })
