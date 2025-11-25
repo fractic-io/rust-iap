@@ -49,7 +49,7 @@ pub struct SubscriptionDetails {
     pub expiration_time: DateTime<Utc>,
 }
 
-pub trait IapGenericDetails {
+pub trait IapGenericDetails: Send + Sync {
     fn is_active(&self) -> bool;
     fn is_sandbox(&self) -> bool;
     fn is_finalized_by_client(&self) -> MaybeKnown<bool>;
