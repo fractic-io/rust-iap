@@ -34,7 +34,7 @@ use crate::{
                 NonConsumableDetails, PriceInfo, SubscriptionDetails,
             },
             iap_product_id::{
-                private::{IapProductId, _ProductIdType},
+                private::{_ProductIdType, IapProductId},
                 IapConsumableId, IapNonConsumableId, IapSubscriptionId,
             },
             iap_purchase_id::IapPurchaseId,
