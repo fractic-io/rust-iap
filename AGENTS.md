@@ -28,7 +28,6 @@ a no-op for Apple by contract.
   the Google JWK set; never log tokens or receipts; secrets are never
   written to disk. Purchase history is the caller's business, not this
   crate's.
-- Commit / PR titles: imperative, trailing period.
 
 ## Docs
 
