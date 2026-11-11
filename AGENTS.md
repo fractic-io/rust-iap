@@ -4,8 +4,7 @@ Stateless in-app-purchase verification for Apple (App Store Server API and
 server notifications, JWS) and Google (Play Developer API, RTDN
 notifications). `IapUtil` is the only public touchpoint and returns domain
 `IapDetails` / `IapUpdateNotification`; vendor structs never leave the
-crate. `IapCtxView` carries the credentials. Consumed by `app/backend`
-(`purchase` resource). Library layout per `/efs/fractic/_/rust.md` §2:
+crate. `IapCtxView` carries the credentials. Library layout:
 `src/impl/mod.rs` gates `impl/domain/{entities,repositories}`,
 `impl/data/{datasources,models/<vendor api>,repositories}` and
 `impl/exports`; plus `constants.rs`, `context.rs`, `errors.rs`, `util.rs`.
