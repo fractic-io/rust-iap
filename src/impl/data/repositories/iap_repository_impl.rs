@@ -88,7 +88,7 @@ where
             IapPurchaseId::AppStoreTransactionId(transaction_id) => {
                 let m = self
                     .app_store_server_api_datasource
-                    .get_transaction_info(&transaction_id)
+                    .get_transaction_info(transaction_id)
                     .await?;
                 IapDetails::from_apple_transaction::<T>(m, include_price_info)?
             }
@@ -158,7 +158,7 @@ where
             .await?;
         Ok(IapUpdateNotification {
             notification_id: notification.notification_uuid.clone(),
-            time: notification.signed_date.clone(),
+            time: notification.signed_date,
             details: NotificationDetails::from_apple_notification(notification, transaction_info)?,
         })
     }
@@ -173,7 +173,7 @@ where
             .parse_notification(authorization_header, body)
             .await?;
         let application_id = notification.package_name.clone();
-        let details = if let Some(_) = notification.test_notification {
+        let details = if notification.test_notification.is_some() {
             NotificationDetails::Test
         } else if let Some(subscription_notification) = notification.subscription_notification {
             NotificationDetails::from_google_subscription_notification(
@@ -190,7 +190,7 @@ where
                 &self.google_play_developer_api_datasource,
             )
             .await?
-        } else if let Some(_) = notification.one_time_product_notification {
+        } else if notification.one_time_product_notification.is_some() {
             NotificationDetails::Other
         } else {
             return Err(GoogleCloudRtdnNotificationParseError::new(
@@ -369,7 +369,7 @@ impl PriceInfo {
         let details = p.prices.get(region_code).ok_or_else(|| {
             GooglePlayDeveloperApiInvalidResponse::new(&format!(
                 "region code '{}' not found in product prices",
-                region_code.to_string()
+                region_code
             ))
         })?;
         Ok(Self {

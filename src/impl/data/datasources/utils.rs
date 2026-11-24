@@ -85,7 +85,7 @@ pub(crate) async fn validate_and_parse_apple_jws<T: DeserializeOwned>(
         .as_ref()
         .map_err(|e| CriticalError::with_debug("failed to build Apple trust store", e))?;
     let valid = cxt
-        .init(&trust_store, &leaf_cert, &chain, |cxt| cxt.verify_cert())
+        .init(trust_store, &leaf_cert, &chain, |cxt| cxt.verify_cert())
         .map_err(|e| InvalidAppleSignature::with_debug("failed to validate x5c chain", &e))?;
     if !valid {
         return Err(InvalidAppleSignature::new("invalid x5c chain"));

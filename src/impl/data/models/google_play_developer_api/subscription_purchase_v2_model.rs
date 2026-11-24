@@ -71,6 +71,10 @@ pub struct SubscriptionPurchaseV2Model {
 /// all auto renewing plans or prepaid plans.
 #[derive(Deserialize, Debug, PartialEq)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+#[allow(
+    clippy::enum_variant_names,
+    reason = "`rename_all` turns the variant names into the API's enum values"
+)]
 pub(crate) enum SubscriptionState {
     /// Unspecified subscription state.
     SubscriptionStateUnspecified,
@@ -170,6 +174,10 @@ pub(crate) struct CancelSurveyResult {
 /// The reason the user selected in the cancel survey.
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+#[allow(
+    clippy::enum_variant_names,
+    reason = "`rename_all` turns the variant names into the API's enum values"
+)]
 pub(crate) enum CancelSurveyReason {
     /// Unspecified cancel survey reason.
     CancelSurveyReasonUnspecified,
@@ -211,6 +219,10 @@ pub(crate) struct TestPurchase {}
 /// The possible acknowledgement states for a subscription.
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+#[allow(
+    clippy::enum_variant_names,
+    reason = "`rename_all` turns the variant names into the API's enum values"
+)]
 pub(crate) enum AcknowledgementState {
     /// Unspecified acknowledgement state.
     AcknowledgementStateUnspecified,
@@ -234,8 +246,8 @@ pub(crate) struct ExternalAccountIdentifiers {
     /// user's account in your app. Present for the following purchases:
     /// * If account linking happened as part of the subscription purchase flow.
     /// * It was specified using
-    /// https://developer.android.com/reference/com/android/billingclient/api/BillingFlowParams.Builder#setobfuscatedaccountid
-    /// when the purchase was made.
+    ///   https://developer.android.com/reference/com/android/billingclient/api/BillingFlowParams.Builder#setobfuscatedaccountid
+    ///   when the purchase was made.
     pub(crate) obfuscated_external_account_id: Option<String>,
     /// An obfuscated version of the id that is uniquely associated with the
     /// user's profile in your app. Only present if specified using
@@ -327,6 +339,10 @@ pub(crate) struct SubscriptionItemPriceChangeDetails {
 /// The mode of the price change.
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+#[allow(
+    clippy::enum_variant_names,
+    reason = "`rename_all` turns the variant names into the API's enum values"
+)]
 pub(crate) enum PriceChangeMode {
     /// Price change mode unspecified. This value should never be set.
     PriceChangeModeUnspecified,
@@ -344,6 +360,10 @@ pub(crate) enum PriceChangeMode {
 /// The state of the price change.
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+#[allow(
+    clippy::enum_variant_names,
+    reason = "`rename_all` turns the variant names into the API's enum values"
+)]
 pub(crate) enum PriceChangeState {
     /// Price change state unspecified. This value should not be used.
     PriceChangeStateUnspecified,
