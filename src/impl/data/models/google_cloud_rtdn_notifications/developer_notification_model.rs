@@ -68,6 +68,10 @@ pub(crate) struct SubscriptionNotification {
 
 #[derive(Debug, Deserialize_repr, PartialEq)]
 #[repr(u8)]
+#[allow(
+    clippy::enum_variant_names,
+    reason = "the variants carry the names of the notification types in the RTDN reference"
+)]
 pub(crate) enum SubscriptionNotificationType {
     /// A subscription was recovered from account hold.
     SubscriptionRecovered = 1,

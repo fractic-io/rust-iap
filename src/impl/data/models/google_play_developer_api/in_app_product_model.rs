@@ -66,6 +66,10 @@ pub struct InAppProductModel {
 
 #[derive(Debug, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
+#[allow(
+    clippy::enum_variant_names,
+    reason = "`rename_all` turns the variant names into the API's enum values"
+)]
 pub(crate) enum Status {
     /// Unspecified status.
     StatusUnspecified,
@@ -77,6 +81,10 @@ pub(crate) enum Status {
 
 #[derive(Debug, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
+#[allow(
+    clippy::enum_variant_names,
+    reason = "`rename_all` turns the variant names into the API's enum values"
+)]
 pub(crate) enum PurchaseType {
     /// Unspecified purchase type.
     PurchaseTypeUnspecified,

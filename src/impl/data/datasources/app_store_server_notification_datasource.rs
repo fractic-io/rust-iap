@@ -63,8 +63,7 @@ impl AppStoreServerNotificationDatasource for AppStoreServerNotificationDatasour
             match decoded_payload
                 .data
                 .as_ref()
-                .map(|data| data.signed_transaction_info.as_ref())
-                .flatten()
+                .and_then(|data| data.signed_transaction_info.as_ref())
             {
                 Some(transaction_info) => {
                     Some(validate_and_parse_apple_jws(transaction_info, &self.expected_aud).await?)
@@ -74,8 +73,7 @@ impl AppStoreServerNotificationDatasource for AppStoreServerNotificationDatasour
         let decoded_renewal_info: Option<JwsRenewalInfoDecodedPayloadModel> = match decoded_payload
             .data
             .as_ref()
-            .map(|data| data.signed_renewal_info.as_ref())
-            .flatten()
+            .and_then(|data| data.signed_renewal_info.as_ref())
         {
             Some(renewal_info) => {
                 Some(validate_and_parse_apple_jws(renewal_info, &self.expected_aud).await?)
