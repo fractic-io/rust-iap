@@ -23,5 +23,5 @@ serde_with = { version = "^3.11.0", features = ["chrono"] }
 yup-oauth2 = "^11.0.0"
 
 [lints.clippy]
-# Constructing a ServerError reports it, so a fallback must be built only when it is taken.
+# This lint is on because a ServerError constructor writes an error record as it runs, not because the fallback is expensive.
 or_fun_call = "warn"
