@@ -56,7 +56,7 @@ pub(crate) async fn validate_and_parse_apple_jws<T: DeserializeOwned>(
         decode_header(jws).map_err(|e| InvalidJws::with_debug("failed to parse JWS header", &e))?;
     let x5c_chain = header
         .x5c
-        .ok_or(InvalidJws::new("missing x5c field in JWS header"))?;
+        .ok_or_else(|| InvalidJws::new("missing x5c field in JWS header"))?;
     let certs = x5c_chain
         .into_iter()
         .map(|x5c| {
@@ -73,7 +73,7 @@ pub(crate) async fn validate_and_parse_apple_jws<T: DeserializeOwned>(
     let mut certs_iter = certs.into_iter();
     let leaf_cert = certs_iter
         .next()
-        .ok_or(InvalidAppleSignature::new("empty x5c chain"))?;
+        .ok_or_else(|| InvalidAppleSignature::new("empty x5c chain"))?;
     for cert in certs_iter {
         chain
             .push(cert.clone())

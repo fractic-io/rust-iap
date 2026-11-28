@@ -21,3 +21,7 @@ serde_json = "^1.0.117"
 serde_repr = "^0.1.19"
 serde_with = { version = "^3.11.0", features = ["chrono"] }
 yup-oauth2 = "^11.0.0"
+
+[lints.clippy]
+# Constructing a ServerError reports it, so a fallback must be built only when it is taken.
+or_fun_call = "warn"
