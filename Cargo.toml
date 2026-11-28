@@ -21,3 +21,7 @@ serde_json = "^1.0.117"
 serde_repr = "^0.1.19"
 serde_with = { version = "^3.11.0", features = ["chrono"] }
 yup-oauth2 = "^11.0.0"
+
+[lints.clippy]
+# This lint is on because a ServerError constructor writes an error record as it runs, not because the fallback is expensive.
+or_fun_call = "warn"

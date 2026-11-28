@@ -170,9 +170,11 @@ impl GooglePlayDeveloperApiDatasourceImpl {
                 )
             })?
             .token()
-            .ok_or(GooglePlayDeveloperApiKeyInvalid::new(
-                "Google Play API service account token is empty",
-            ))?
+            .ok_or_else(|| {
+                GooglePlayDeveloperApiKeyInvalid::new(
+                    "Google Play API service account token is empty",
+                )
+            })?
             .to_string())
     }
 
